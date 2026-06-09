@@ -1,18 +1,45 @@
 package learn_opengl
 
+import "core:c"
 import "core:log"
 import "core:mem"
-import win "core:sys/windows"
+import "core:sys/windows"
 
 import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 
+// odinfmt: disable
 WINDOW_WIDTH :: 800
 WINDOW_HEIGHT :: 600
 
+vertex_shader_source: cstring = `
+#version 330 core
+layout (location = 0) in vec3 aPos;
+
+void main()
+{
+    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+}`
+
+fragment_shader_source: cstring = `
+#version 330 core
+out vec4 FragColor;
+
+void main()
+{
+    FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
+} `
+
+vertices := [?]f32 {
+	-0.5, -0.5, 0.0,
+	 0.5, -0.5, 0.0,
+	 0.0,  0.5, 0.0,
+}
+// odinfmt: enable
+
 main :: proc() {
 	when ODIN_OS == .Windows {
-		win.SetProcessDPIAware()
+		windows.SetProcessDPIAware()
 	}
 
 	cl := log.create_console_logger(opt = {.Level})
@@ -32,7 +59,7 @@ main :: proc() {
 
 	sdl.GL_SetAttribute(.CONTEXT_MAJOR_VERSION, 3)
 	sdl.GL_SetAttribute(.CONTEXT_MINOR_VERSION, 3)
-	sdl.GL_SetAttribute(.CONTEXT_PROFILE_MASK, cast(i32)sdl.GL_CONTEXT_PROFILE_CORE)
+	sdl.GL_SetAttribute(.CONTEXT_PROFILE_MASK, cast(c.int)sdl.GL_CONTEXT_PROFILE_CORE)
 
 	window := sdl.CreateWindow(
 		"Learning OpenGL",
@@ -68,7 +95,56 @@ main :: proc() {
 	gl.GetIntegerv(gl.MAX_VERTEX_ATTRIBS, &max_attrs)
 	log.infof("OpenGL: Maximum number of vertex attributes supported: %d", max_attrs)
 
+	success: i32 = ---
+	info_log: [512]c.char
+
+	vertex_shader := gl.CreateShader(gl.VERTEX_SHADER)
+	gl.ShaderSource(vertex_shader, 1, &vertex_shader_source, nil)
+	gl.CompileShader(vertex_shader)
+	gl.GetShaderiv(vertex_shader, gl.COMPILE_STATUS, &success)
+	if success != 1 {
+		gl.GetShaderInfoLog(vertex_shader, size_of(info_log), nil, &info_log[0])
+		log.errorf("Vertex compilation error: \n\t\t\t%s", cast(cstring)&info_log[0])
+	}
+
+	fragment_shader := gl.CreateShader(gl.FRAGMENT_SHADER)
+	gl.ShaderSource(fragment_shader, 1, &fragment_shader_source, nil)
+	gl.CompileShader(fragment_shader)
+	gl.GetShaderiv(fragment_shader, gl.COMPILE_STATUS, &success)
+	if success != 1 {
+		gl.GetShaderInfoLog(fragment_shader, size_of(info_log), nil, &info_log[0])
+		log.errorf("Fragment compilation error: \n\t\t\t%s", cast(cstring)&info_log[0])
+	}
+
+	shader_program := gl.CreateProgram()
+	gl.AttachShader(shader_program, vertex_shader)
+	gl.AttachShader(shader_program, fragment_shader)
+	gl.LinkProgram(shader_program)
+	gl.GetProgramiv(shader_program, gl.LINK_STATUS, &success)
+	if success != 1 {
+		gl.GetProgramInfoLog(shader_program, size_of(info_log), nil, &info_log[0])
+		log.errorf("Shader program link error: \n\t\t\t%s", cast(cstring)&info_log[0])
+	}
+	defer gl.DeleteProgram(shader_program)
+	gl.DeleteShader(vertex_shader)
+	gl.DeleteShader(fragment_shader)
+
 	gl.Viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
+
+	vbo, vao: u32 = ---, ---
+
+	gl.GenVertexArrays(1, &vao)
+
+	gl.BindVertexArray(vao)
+	gl.GenBuffers(1, &vbo)
+	defer gl.DeleteBuffers(1, &vbo)
+	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
+	gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices), &vertices, gl.STATIC_DRAW)
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 3 * size_of(f32), 0)
+	gl.EnableVertexAttribArray(0)
+
+	gl.BindVertexArray(0)
+
 
 	should_close := false
 	for !should_close {
@@ -76,6 +152,10 @@ main :: proc() {
 
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
+
+		gl.BindVertexArray(vao)
+		gl.UseProgram(shader_program)
+		gl.DrawArrays(gl.TRIANGLES, 0, 3)
 
 		sdl.GL_SwapWindow(window)
 	}
