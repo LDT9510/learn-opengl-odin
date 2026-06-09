@@ -31,10 +31,17 @@ void main()
 } `
 
 vertices := [?]f32 {
-	-0.5, -0.5, 0.0,
-	 0.5, -0.5, 0.0,
-	 0.0,  0.5, 0.0,
+     0.5,  0.5, 0.0,  // top right
+     0.5, -0.5, 0.0,  // bottom right
+    -0.5, -0.5, 0.0,  // bottom left
+    -0.5,  0.5, 0.0,  // top left
 }
+
+indices := [?]i32 {
+    0, 1, 3,  // first triangle
+    1, 2, 3,  // second triangle
+}
+
 // odinfmt: enable
 
 main :: proc() {
@@ -91,11 +98,11 @@ main :: proc() {
 	glsl_version := gl.GetString(gl.SHADING_LANGUAGE_VERSION)
 	log.infof("OpenGL: GLSL version %s", glsl_version)
 
-	max_attrs: i32 = ---
+	max_attrs: i32
 	gl.GetIntegerv(gl.MAX_VERTEX_ATTRIBS, &max_attrs)
 	log.infof("OpenGL: Maximum number of vertex attributes supported: %d", max_attrs)
 
-	success: i32 = ---
+	success: i32
 	info_log: [512]c.char
 
 	vertex_shader := gl.CreateShader(gl.VERTEX_SHADER)
@@ -131,11 +138,15 @@ main :: proc() {
 
 	gl.Viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
 
-	vbo, vao: u32 = ---, ---
+	vbo, vao, ebo: u32
 
 	gl.GenVertexArrays(1, &vao)
-
 	gl.BindVertexArray(vao)
+
+	gl.GenBuffers(1, &ebo)
+	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
+	gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(indices), &indices, gl.STATIC_DRAW)
+
 	gl.GenBuffers(1, &vbo)
 	defer gl.DeleteBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
@@ -155,7 +166,8 @@ main :: proc() {
 
 		gl.BindVertexArray(vao)
 		gl.UseProgram(shader_program)
-		gl.DrawArrays(gl.TRIANGLES, 0, 3)
+		// gl.DrawArrays(gl.TRIANGLES, 0, 3)
+		gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, nil)
 
 		sdl.GL_SwapWindow(window)
 	}
