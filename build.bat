@@ -12,6 +12,6 @@ odin build src^
 	-vet-tabs^
 	-warnings-as-errors^
 	
-if %ERRORLEVEL% EQU 0 (
+if %ERRORLEVEL% equ 0 (
 	.bin\learn_opengl.exe
 )
