@@ -1,6 +1,7 @@
 package learn_opengl
 
 import "core:c"
+import "core:math"
 import "core:log"
 import "core:mem"
 import "core:sys/windows"
@@ -16,23 +17,20 @@ vertex_shader_source: cstring = `
 #version 330 core
 layout (location = 0) in vec3 aPos;
 
-out vec4 vertexColor;
-
 void main()
 {
     gl_Position = vec4(aPos, 1.0);
-	vertexColor = vec4(0.5, 0.0, 0.0, 1.0);
 }`
 
 fragment_shader_source: cstring = `
 #version 330 core
 out vec4 FragColor;
 
-in vec4 vertexColor;
+uniform vec4 ourColor;
 
 void main()
 {
-    FragColor = vertexColor;
+    FragColor = ourColor;
 } `
 
 vertices := [?]f32 {
@@ -169,12 +167,17 @@ main :: proc() {
 	for !should_close {
 		should_close = handle_input()
 
+		time_value := get_elapsed_seconds()
+		green_value := (math.sin(time_value) / 2.0) + 0.5
+
+		vertex_color_loc := gl.GetUniformLocation(shader_program, "ourColor")
+		gl.UseProgram(shader_program)
+		gl.Uniform4f(vertex_color_loc, 0.0, cast(f32)green_value, 0.0, 1.0)
+
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 
 		gl.BindVertexArray(vao)
-		gl.UseProgram(shader_program)
-		// gl.DrawArrays(gl.TRIANGLES, 0, 3)
 		gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, nil)
 
 		sdl.GL_SwapWindow(window)
