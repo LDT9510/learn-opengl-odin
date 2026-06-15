@@ -52,10 +52,13 @@ main :: proc() {
 	cl := log.create_console_logger(opt = {.Level})
 	context.logger = cl
 
-	tracking_allocator: mem.Tracking_Allocator
-	mem.tracking_allocator_init(&tracking_allocator, context.allocator)
-	context.allocator = mem.tracking_allocator(&tracking_allocator)
-	defer reset_tracking_allocator()
+	when ODIN_DEBUG {
+		tracking_allocator: mem.Tracking_Allocator
+		mem.tracking_allocator_init(&tracking_allocator, context.allocator)
+		context.allocator = mem.tracking_allocator(&tracking_allocator)
+		defer reset_tracking_allocator()
+		log.info("Debug mode")
+	}
 
 	print_sdl_version()
 
@@ -189,11 +192,7 @@ handle_input :: proc() -> bool {
 		}
 	}
 
-	if use_wireframe {
-		gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
-	} else {
-		gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
-	}
+	gl.PolygonMode(gl.FRONT_AND_BACK, use_wireframe ? gl.LINE : gl.FILL)
 
 	return false
 }
@@ -215,6 +214,8 @@ print_sdl_version :: proc() {
 	)
 }
 
+import "core:fmt"
+
 reset_tracking_allocator :: proc() -> bool {
 	a := cast(^mem.Tracking_Allocator)context.allocator.data
 	err := false
@@ -222,7 +223,7 @@ reset_tracking_allocator :: proc() -> bool {
 		log.warnf("Leaked allocation count: %v", len(a.allocation_map))
 	}
 	for _, v in a.allocation_map {
-		log.warnf("%v: Leaked %v bytes", v.location, v.size)
+		fmt.eprintfln("%v: Leaked %v bytes", v.location, v.size)
 		err = true
 	}
 

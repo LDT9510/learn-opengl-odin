@@ -5,6 +5,7 @@ odin build src^
 	-o:minimal^
 	-linker:radlink^
 	-microarch:native^
+	-debug^
 
 	-vet^
 	-vet-semicolon^
