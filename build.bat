@@ -7,6 +7,9 @@ odin build src^
 	-microarch:native^
 	-debug^
 
+	-collection:lib=lib^
+	-collection:extern=extern^
+
 	-vet^
 	-vet-semicolon^
 	-vet-style^
@@ -15,4 +18,6 @@ odin build src^
 	
 if %ERRORLEVEL% equ 0 (
 	.bin\learn_opengl.exe
+) else (
+	exit 1
 )

@@ -1,11 +1,13 @@
-package learn_opengl
+package glcore
 
 import "core:log"
 import "core:os"
 import "core:strings"
 
-CONTENT_BASE_PATH:: "content/"
-CONTENT_SHADER_PATH:: CONTENT_BASE_PATH + "shaders/"
+OPENGL_LEARN_EXERCISES :: #config(OPENGL_LEARN_EXERCISES, false)
+
+CONTENT_BASE_PATH :: "content/" when !OPENGL_LEARN_EXERCISES else "exercises/_content/"
+CONTENT_SHADER_PATH :: CONTENT_BASE_PATH + "shaders/"
 
 File_Content :: distinct string
 

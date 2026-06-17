@@ -1,4 +1,4 @@
-package learn_opengl
+package glcore
 
 import sdl "vendor:sdl3"
 

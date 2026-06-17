@@ -1,6 +1,11 @@
 {
-	"enable_inlay_hints_params": true,
-	"enable_inlay_hints_default_params": true,
-	"enable_inlay_hints_implicit_return": true,
-	"enable_semantic_tokens": true
+    "$schema": "https://raw.githubusercontent.com/DanielGavin/ols/master/misc/ols.schema.json",
+    "collections": [
+        { "name": "lib", "path": "lib"},
+        { "name": "extern", "path": "extern"}
+    ],
+    "enable_inlay_hints_params": true,
+    "enable_inlay_hints_default_params": true,
+    "enable_inlay_hints_implicit_return": true,
+    "enable_semantic_tokens": true
 }

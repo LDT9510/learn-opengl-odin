@@ -1,4 +1,4 @@
-/// Draw 2 triangels next two each other using different VAOs and VBOs
+/// Draw 2 triangles next two each other using different VAOs and VBOs
 
 package learn_opengl
 

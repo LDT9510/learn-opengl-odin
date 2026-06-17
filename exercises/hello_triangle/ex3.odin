@@ -1,4 +1,4 @@
-/// Draw 2 triangels next two each other using different VAOs and VBOs
+/// Draw 2 triangles with different shaders, one of them orange and the other yellow
 
 package learn_opengl
 

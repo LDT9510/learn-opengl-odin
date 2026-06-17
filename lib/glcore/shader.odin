@@ -1,10 +1,9 @@
-package learn_opengl
+package glcore
 
 import "core:c"
 import "core:log"
 import "core:math/linalg"
 import "core:strings"
-
 import gl "vendor:OpenGL"
 
 Shader_Type :: enum u32 {
@@ -75,8 +74,8 @@ shader_load_from_files :: proc(
 	vertex_file_name: string,
 	fragment_file_name: string,
 ) -> (
-program_id: Shader_Program_Handle,
-ok: bool,
+	program_id: Shader_Program_Handle,
+	ok: bool,
 ) {
 	// NOTE: to avoid unnecessary allocations, read the file as a cstring directly
 	vertex_content := content_shader_read(vertex_file_name) or_return
@@ -139,7 +138,11 @@ shader_uniform_set_vec3_f :: proc(program_id: Shader_Program_Handle, name: cstri
 	gl.Uniform3f(gl.GetUniformLocation(cast(u32)program_id, name), x, y, z)
 }
 
-shader_uniform_set_vec4_f :: proc(program_id: Shader_Program_Handle, name: cstring, x, y, z, w: f32) {
+shader_uniform_set_vec4_f :: proc(
+	program_id: Shader_Program_Handle,
+	name: cstring,
+	x, y, z, w: f32,
+) {
 	gl.Uniform4f(gl.GetUniformLocation(cast(u32)program_id, name), x, y, z, w)
 }
 
@@ -164,7 +167,13 @@ shader_uniform_set_vec4_v :: proc(
 	name: cstring,
 	value: linalg.Vector4f32,
 ) {
-	gl.Uniform4f(gl.GetUniformLocation(cast(u32)program_id, name), value.x, value.y, value.z, value.w)
+	gl.Uniform4f(
+		gl.GetUniformLocation(cast(u32)program_id, name),
+		value.x,
+		value.y,
+		value.z,
+		value.w,
+	)
 }
 
 shader_uniform_set_mat2 :: proc(
