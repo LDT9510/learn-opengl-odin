@@ -3,39 +3,19 @@ package learn_opengl
 import "core:c"
 import "core:log"
 import "core:mem"
+import "core:os"
 import "core:sys/windows"
 
 import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 
-// odinfmt: disable
 WINDOW_WIDTH :: 800
 WINDOW_HEIGHT :: 600
 
-vertex_shader_source: cstring = `
-#version 330 core
-layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec3 aColor;
 
-out vec3 ourColor;
+// odinfmt: disable
 
-void main()
-{
-    gl_Position = vec4(aPos, 1.0);
-	ourColor = aColor;
-}`
-
-fragment_shader_source: cstring = `
-#version 330 core
-out vec4 FragColor;
-in vec3 ourColor;
-
-void main()
-{
-    FragColor = vec4(ourColor, 1.0);
-} `
-
-vertices := [?]f32 {
+g_vertices := [?]f32 {
      // positions     // colors
      0.5, -0.5, 0.0,  1.0, 0.0, 0.0,  // bottom right
     -0.5, -0.5, 0.0,  0.0, 1.0, 0.0,  // bottom let
@@ -63,7 +43,7 @@ main :: proc() {
 	print_sdl_version()
 
 	if !sdl.Init({.VIDEO}) {
-		log.fatalf("SDL: could not initialize: %s", sdl.GetError())
+		crash("SDL: could not initialize: %s", sdl.GetError())
 	}
 	defer sdl.Quit()
 
@@ -78,13 +58,13 @@ main :: proc() {
 		{.OPENGL, .RESIZABLE},
 	)
 	if window == nil {
-		log.fatalf("SDL: could not create window: %s", sdl.GetError())
+		crash("SDL: could not create window: %s", sdl.GetError())
 	}
 	defer sdl.DestroyWindow(window)
 
 	gl_context := sdl.GL_CreateContext(window)
 	if gl_context == nil {
-		log.fatalf("SDL: could not create OpenGL context: %s", sdl.GetError())
+		crash("SDL: could not create OpenGL context: %s", sdl.GetError())
 	}
 	defer sdl.GL_DestroyContext(gl_context)
 
@@ -105,39 +85,11 @@ main :: proc() {
 	gl.GetIntegerv(gl.MAX_VERTEX_ATTRIBS, &max_attrs)
 	log.infof("OpenGL: Maximum number of vertex attributes supported: %d", max_attrs)
 
-	success: i32
-	info_log: [512]c.char
-
-	vertex_shader := gl.CreateShader(gl.VERTEX_SHADER)
-	gl.ShaderSource(vertex_shader, 1, &vertex_shader_source, nil)
-	gl.CompileShader(vertex_shader)
-	gl.GetShaderiv(vertex_shader, gl.COMPILE_STATUS, &success)
-	if success != 1 {
-		gl.GetShaderInfoLog(vertex_shader, size_of(info_log), nil, &info_log[0])
-		log.errorf("Vertex compilation error: \n\t\t\t%s", cast(cstring)&info_log[0])
-	}
-
-	fragment_shader := gl.CreateShader(gl.FRAGMENT_SHADER)
-	gl.ShaderSource(fragment_shader, 1, &fragment_shader_source, nil)
-	gl.CompileShader(fragment_shader)
-	gl.GetShaderiv(fragment_shader, gl.COMPILE_STATUS, &success)
-	if success != 1 {
-		gl.GetShaderInfoLog(fragment_shader, size_of(info_log), nil, &info_log[0])
-		log.errorf("Fragment compilation error: \n\t\t\t%s", cast(cstring)&info_log[0])
-	}
-
-	shader_program := gl.CreateProgram()
-	gl.AttachShader(shader_program, vertex_shader)
-	gl.AttachShader(shader_program, fragment_shader)
-	gl.LinkProgram(shader_program)
-	gl.GetProgramiv(shader_program, gl.LINK_STATUS, &success)
-	if success != 1 {
-		gl.GetProgramInfoLog(shader_program, size_of(info_log), nil, &info_log[0])
-		log.errorf("Shader program link error: \n\t\t\t%s", cast(cstring)&info_log[0])
-	}
-	defer gl.DeleteProgram(shader_program)
-	gl.DeleteShader(vertex_shader)
-	gl.DeleteShader(fragment_shader)
+	shader_program :=
+		shader_load_from_files("vertex", "fragment") or_else crash(
+			"Error loading shaders",
+		)
+	defer shader_delete_program(shader_program)
 
 	gl.Viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
 
@@ -149,7 +101,7 @@ main :: proc() {
 	gl.GenBuffers(1, &vbo)
 	defer gl.DeleteBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices), &vertices, gl.STATIC_DRAW)
+	gl.BufferData(gl.ARRAY_BUFFER, size_of(g_vertices), &g_vertices, gl.STATIC_DRAW)
 	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 6 * size_of(f32), 0) // position
 	gl.EnableVertexAttribArray(0)
 	gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, 6 * size_of(f32), 3 * size_of(f32)) // color
@@ -164,7 +116,7 @@ main :: proc() {
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 
-		gl.UseProgram(shader_program)
+		shader_use_program(shader_program)
 		gl.BindVertexArray(vao)
 		gl.DrawArrays(gl.TRIANGLES, 0, 3)
 
@@ -225,4 +177,10 @@ reset_tracking_allocator :: proc() -> bool {
 
 	mem.tracking_allocator_clear(a)
 	return err
+}
+
+crash :: proc(fmt_str: string, args: ..any, location := #caller_location) -> ! {
+	log.fatalf(fmt_str, ..args, location = location)
+	log.fatal("Crashing program...")
+	os.exit(1)
 }
