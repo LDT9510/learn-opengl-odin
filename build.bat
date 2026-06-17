@@ -7,7 +7,7 @@ odin build src^
 	-microarch:native^
 	-debug^
 
-	-collection:lib=lib^
+	-collection:lib=src\lib^
 	-collection:extern=extern^
 
 	-vet^

@@ -6,10 +6,19 @@ import "core:sys/windows"
 import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 
+import "lib:devui"
 import glc "lib:glcore"
 
 // avoids unused import error when ODIN_DEBUG is 0
 _ :: mem
+
+State :: struct {
+	use_wireframe:        bool,
+	program_should_close: bool,
+}
+g_state: State
+
+
 
 // odinfmt: disable
 
@@ -40,8 +49,11 @@ main :: proc() {
 
 	glc.print_sdl_version()
 
-	window := glc.create_opengl_window()
-	defer glc.destroy_opengl_window(window)
+	window, gl_ctx := glc.create_opengl_window()
+	defer glc.destroy_opengl_window(window, gl_ctx)
+
+	devui.init_for_sdl_window(window, gl_ctx)
+	defer devui.destroy()
 
 	shader_program :=
 		glc.shader_load_from_files("vertex", "fragment") or_else glc.crash("Error loading shaders")
@@ -63,9 +75,10 @@ main :: proc() {
 
 	gl.BindVertexArray(0)
 
-	should_close := false
-	for !should_close {
-		should_close = glc.handle_input()
+	for !g_state.program_should_close {
+		handle_events()
+
+		gl.PolygonMode(gl.FRONT_AND_BACK, g_state.use_wireframe ? gl.LINE : gl.FILL)
 
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
@@ -75,6 +88,41 @@ main :: proc() {
 		gl.BindVertexArray(vao)
 		gl.DrawArrays(gl.TRIANGLES, 0, 3)
 
+		devui.render_ui("Learning OpenGL", ui_render, ui_render_shortcuts)
+
 		sdl.GL_SwapWindow(window)
+	}
+}
+
+ui_render :: proc() {
+}
+
+ui_render_shortcuts :: proc() {
+	devui.shortcut("ESC", "Close program")
+	devui.shortcut("  U", "Enables wireframe mode")
+}
+
+process_key_inputs :: proc(keycode: sdl.Keycode) {
+	switch keycode {
+	case sdl.K_ESCAPE:
+		g_state.program_should_close = true
+	case sdl.K_U:
+		g_state.use_wireframe = !g_state.use_wireframe
+	}
+}
+
+handle_events :: proc() {
+	e: sdl.Event = ---
+	for sdl.PollEvent(&e) {
+		devui.process_event(&e)
+
+		#partial switch e.type {
+		case .KEY_DOWN:
+			process_key_inputs(e.key.key)
+		case .QUIT:
+			g_state.program_should_close = true
+		case .WINDOW_PIXEL_SIZE_CHANGED:
+			gl.Viewport(0, 0, e.window.data1, e.window.data2)
+		}
 	}
 }

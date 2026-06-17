@@ -21,7 +21,7 @@ odin build exercises\%section%\ex%exercise%.odin -file^
 	-microarch:native^
 	-debug^
 
-	-collection:lib=lib^
+	-collection:lib=src\lib^
 	-collection:extern=extern^
 
 	-vet^

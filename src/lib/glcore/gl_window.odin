@@ -8,9 +8,7 @@ import sdl "vendor:sdl3"
 WINDOW_WIDTH :: 800
 WINDOW_HEIGHT :: 600
 
-_g_opengl_context: sdl.GLContext
-
-create_opengl_window :: proc() -> ^sdl.Window {
+create_opengl_window :: proc() -> (window: ^sdl.Window, gl_ctx: sdl.GLContext) {
 	if !sdl.Init({.VIDEO}) {
 		crash("SDL: could not initialize: %s", sdl.GetError())
 	}
@@ -19,7 +17,7 @@ create_opengl_window :: proc() -> ^sdl.Window {
 	sdl.GL_SetAttribute(.CONTEXT_MINOR_VERSION, 3)
 	sdl.GL_SetAttribute(.CONTEXT_PROFILE_MASK, cast(c.int)sdl.GL_CONTEXT_PROFILE_CORE)
 
-	window := sdl.CreateWindow(
+	window = sdl.CreateWindow(
 		"Learning OpenGL",
 		WINDOW_WIDTH,
 		WINDOW_HEIGHT,
@@ -29,8 +27,8 @@ create_opengl_window :: proc() -> ^sdl.Window {
 		crash("SDL: could not create window: %s", sdl.GetError())
 	}
 
-	_g_opengl_context = sdl.GL_CreateContext(window)
-	if _g_opengl_context == nil {
+	gl_ctx = sdl.GL_CreateContext(window)
+	if gl_ctx == nil {
 		crash("SDL: could not create OpenGL context: %s", sdl.GetError())
 	}
 
@@ -53,11 +51,11 @@ create_opengl_window :: proc() -> ^sdl.Window {
 
 	gl.Viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
 
-	return window
+	return window, gl_ctx
 }
 
-destroy_opengl_window :: proc(window: ^sdl.Window) {
+destroy_opengl_window :: proc(window: ^sdl.Window, gl_context: sdl.GLContext) {
 	sdl.DestroyWindow(window)
-	sdl.GL_DestroyContext(_g_opengl_context)
+	sdl.GL_DestroyContext(gl_context)
 	sdl.Quit()
 }

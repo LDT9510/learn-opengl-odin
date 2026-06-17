@@ -1,0 +1,54 @@
+package devui
+
+import sdl "vendor:sdl3"
+
+import im "extern:imgui"
+import im_gl "extern:imgui/imgui_impl_opengl3"
+import im_sdl "extern:imgui/imgui_impl_sdl3"
+
+init_for_sdl_window :: proc(window: ^sdl.Window, gl_context: sdl.GLContext) {
+	im.CHECKVERSION()
+	im.CreateContext()
+	im_sdl.InitForOpenGL(window, gl_context)
+	im_gl.Init()
+
+	io := im.GetIO()
+	io.ConfigFlags += { .DockingEnable }
+
+	im.FontAtlas_AddFontFromMemoryCompressedTTF(
+		io.Fonts,
+		&g_roboto_medium_compressed_data,
+		ROBOT_MEDIUM_COMPRESSED_SIZE,
+		20.0,
+	)
+
+	im.StyleColorsDark()
+}
+
+begin_frame :: proc() {
+	im_gl.NewFrame()
+	im_sdl.NewFrame()
+	im.NewFrame()
+
+	im.DockSpaceOverViewport(0, nil, {.PassthruCentralNode})
+}
+
+render_frame :: proc() {
+	im.Render()
+	im_gl.RenderDrawData(im.GetDrawData())
+
+	// backup_current_context := sdl.GL_GetCurrentContext()
+	// im.UpdatePlatformWindows()
+	// im.RenderPlatformWindowsDefault()
+	// sdl.GL_MakeCurrent(backup_current_window, backup_current_context)
+}
+
+process_event :: proc(event: ^sdl.Event) {
+	im_sdl.ProcessEvent(event)
+}
+
+destroy :: proc() {
+	im_gl.Shutdown()
+	im_sdl.Shutdown()
+	im.DestroyContext()
+}
