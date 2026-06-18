@@ -4,9 +4,9 @@ import "core:log"
 import "core:os"
 import "core:strings"
 
-OPENGL_LEARN_EXERCISES :: #config(OPENGL_LEARN_EXERCISES, false)
+OPENGL_EXERCISES_MODE :: #config(OPENGL_EXERCISES_MODE, false)
 
-CONTENT_BASE_PATH :: "content/" when !OPENGL_LEARN_EXERCISES else "exercises/_content/"
+CONTENT_BASE_PATH :: "content/" when !OPENGL_EXERCISES_MODE else "exercises/_content/"
 CONTENT_SHADER_PATH :: CONTENT_BASE_PATH + "shaders/"
 
 File_Content :: distinct string

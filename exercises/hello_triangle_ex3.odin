@@ -1,4 +1,4 @@
-/// Draw 2 triangles next two each other using different VAOs and VBOs
+// Draw 2 triangles with different shaders, one of them orange and the other yellow
 
 package learn_opengl
 
@@ -23,13 +23,22 @@ void main()
     gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
 }`
 
-fragment_shader_source: cstring = `
+fragment_shader_source1: cstring = `
 #version 330 core
 out vec4 FragColor;
 
 void main()
 {
     FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
+} `
+
+fragment_shader_source2: cstring = `
+#version 330 core
+out vec4 FragColor;
+
+void main()
+{
+    FragColor = vec4(1.0f, 1.0f, 0.0f, 1.0f);
 } `
 
 vertices1 := [?]f32 {
@@ -118,27 +127,49 @@ main :: proc() {
 		log.errorf("Vertex compilation error: \n\t\t\t%s", cast(cstring)&info_log[0])
 	}
 
-	fragment_shader := gl.CreateShader(gl.FRAGMENT_SHADER)
-	gl.ShaderSource(fragment_shader, 1, &fragment_shader_source, nil)
-	gl.CompileShader(fragment_shader)
-	gl.GetShaderiv(fragment_shader, gl.COMPILE_STATUS, &success)
+	fragment_shader1 := gl.CreateShader(gl.FRAGMENT_SHADER)
+	gl.ShaderSource(fragment_shader1, 1, &fragment_shader_source1, nil)
+	gl.CompileShader(fragment_shader1)
+	gl.GetShaderiv(fragment_shader1, gl.COMPILE_STATUS, &success)
 	if success != 1 {
-		gl.GetShaderInfoLog(fragment_shader, size_of(info_log), nil, &info_log[0])
+		gl.GetShaderInfoLog(fragment_shader1, size_of(info_log), nil, &info_log[0])
 		log.errorf("Fragment compilation error: \n\t\t\t%s", cast(cstring)&info_log[0])
 	}
 
-	shader_program := gl.CreateProgram()
-	gl.AttachShader(shader_program, vertex_shader)
-	gl.AttachShader(shader_program, fragment_shader)
-	gl.LinkProgram(shader_program)
-	gl.GetProgramiv(shader_program, gl.LINK_STATUS, &success)
+	fragment_shader2 := gl.CreateShader(gl.FRAGMENT_SHADER)
+	gl.ShaderSource(fragment_shader2, 1, &fragment_shader_source2, nil)
+	gl.CompileShader(fragment_shader2)
+	gl.GetShaderiv(fragment_shader2, gl.COMPILE_STATUS, &success)
 	if success != 1 {
-		gl.GetProgramInfoLog(shader_program, size_of(info_log), nil, &info_log[0])
+		gl.GetShaderInfoLog(fragment_shader2, size_of(info_log), nil, &info_log[0])
+		log.errorf("Fragment compilation error: \n\t\t\t%s", cast(cstring)&info_log[0])
+	}
+    
+	shader_program1 := gl.CreateProgram()
+	gl.AttachShader(shader_program1, vertex_shader)
+	gl.AttachShader(shader_program1, fragment_shader1)
+	gl.LinkProgram(shader_program1)
+	gl.GetProgramiv(shader_program1, gl.LINK_STATUS, &success)
+	if success != 1 {
+		gl.GetProgramInfoLog(shader_program1, size_of(info_log), nil, &info_log[0])
 		log.errorf("Shader program link error: \n\t\t\t%s", cast(cstring)&info_log[0])
 	}
-	defer gl.DeleteProgram(shader_program)
+
+	shader_program2 := gl.CreateProgram()
+	gl.AttachShader(shader_program2, vertex_shader)
+	gl.AttachShader(shader_program2, fragment_shader2)
+	gl.LinkProgram(shader_program2)
+	gl.GetProgramiv(shader_program2, gl.LINK_STATUS, &success)
+	if success != 1 {
+		gl.GetProgramInfoLog(shader_program2, size_of(info_log), nil, &info_log[0])
+		log.errorf("Shader program link error: \n\t\t\t%s", cast(cstring)&info_log[0])
+	}
+
+	defer gl.DeleteProgram(shader_program1)
+	defer gl.DeleteProgram(shader_program2)
 	gl.DeleteShader(vertex_shader)
-	gl.DeleteShader(fragment_shader)
+	gl.DeleteShader(fragment_shader1)
+	gl.DeleteShader(fragment_shader2)
 
 	gl.Viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
 
@@ -175,9 +206,10 @@ main :: proc() {
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 
-		gl.UseProgram(shader_program)
+		gl.UseProgram(shader_program1)
 		gl.BindVertexArray(vao1)
 		gl.DrawArrays(gl.TRIANGLES, 0, 3)
+		gl.UseProgram(shader_program2)
 		gl.BindVertexArray(vao2)
 		gl.DrawArrays(gl.TRIANGLES, 0, 3)
 

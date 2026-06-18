@@ -1,4 +1,4 @@
-/// Draw 2 triangles next two each other using more vertices
+// Draw 2 triangles next two each other using more vertices
 
 package learn_opengl
 
