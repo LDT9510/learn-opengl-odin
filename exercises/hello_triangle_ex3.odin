@@ -6,9 +6,12 @@ import "core:c"
 import "core:log"
 import "core:mem"
 import "core:sys/windows"
-
 import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
+
+import glc "lib:glcore"
+
+_ :: glc.OPENGL_EXERCISES_MODE // do not raise unused error
 
 // odinfmt: disable
 WINDOW_WIDTH :: 800
@@ -144,7 +147,7 @@ main :: proc() {
 		gl.GetShaderInfoLog(fragment_shader2, size_of(info_log), nil, &info_log[0])
 		log.errorf("Fragment compilation error: \n\t\t\t%s", cast(cstring)&info_log[0])
 	}
-    
+
 	shader_program1 := gl.CreateProgram()
 	gl.AttachShader(shader_program1, vertex_shader)
 	gl.AttachShader(shader_program1, fragment_shader1)

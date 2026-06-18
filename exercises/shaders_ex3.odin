@@ -29,17 +29,13 @@ State :: struct {
 }
 g_state: State
 
-
-
 // odinfmt: disable
-
 g_vertices := [?]f32 {
      // positions     // colors
      0.5, -0.5, 0.0,  1.0, 0.0, 0.0,  // bottom right
     -0.5, -0.5, 0.0,  0.0, 1.0, 0.0,  // bottom let
      0.0,  0.5, 0.0,  0.0, 0.0, 1.0,  // top
 }
-
 // odinfmt: enable
 
 main :: proc() {
@@ -67,9 +63,7 @@ main :: proc() {
 	defer devui.destroy()
 
 	shader_program :=
-		glc.shader_load_from_files("vertex_pos_out_v", "vertex_pos_out_f") or_else glc.crash(
-			"Error loading shaders",
-		)
+		glc.shader_load_from_files("vertex_pos_out") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(shader_program)
 
 	vbo, vao: u32

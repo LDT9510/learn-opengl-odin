@@ -70,7 +70,21 @@ shader_load_from_glsl_code :: proc(
 	return program_id, true
 }
 
-shader_load_from_files :: proc(
+shader_load_from_files :: proc {
+	shader_load_same_name_files,
+	shader_load_diff_name_files,
+}
+
+shader_load_same_name_files :: proc(
+	shader_common_name: string,
+) -> (
+	program_id: Shader_Program_Handle,
+	ok: bool,
+) {
+	return shader_load_diff_name_files(shader_common_name, shader_common_name)
+}
+
+shader_load_diff_name_files :: proc(
 	vertex_file_name: string,
 	fragment_file_name: string,
 ) -> (
@@ -78,8 +92,8 @@ shader_load_from_files :: proc(
 	ok: bool,
 ) {
 	// NOTE: to avoid unnecessary allocations, read the file as a cstring directly
-	vertex_content := content_shader_read(vertex_file_name) or_return
-	fragment_content := content_shader_read(fragment_file_name) or_return
+	vertex_content := content_shader_read(vertex_file_name, .Vertex) or_return
+	fragment_content := content_shader_read(fragment_file_name, .Fragment) or_return
 	defer {
 		content_delete(vertex_content)
 		content_delete(fragment_content)

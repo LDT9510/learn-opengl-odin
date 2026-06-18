@@ -8,11 +8,14 @@ OPENGL_EXERCISES_MODE :: #config(OPENGL_EXERCISES_MODE, false)
 
 CONTENT_BASE_PATH :: "content/" when !OPENGL_EXERCISES_MODE else "exercises/_content/"
 CONTENT_SHADER_PATH :: CONTENT_BASE_PATH + "shaders/"
+VERTEX_SHADER_EXT :: ".vert"
+FRAGMENT_SHADER_EXT :: ".frag"
 
 File_Content :: distinct string
 
-content_shader_read :: proc(shader_name: string) -> (content: File_Content, ok: bool) {
-	shader_file_path := strings.concatenate({CONTENT_SHADER_PATH, shader_name, ".glsl"})
+content_shader_read :: proc(shader_name: string, shader_type: Shader_Type) -> (content: File_Content, ok: bool) {
+	extension := VERTEX_SHADER_EXT if shader_type == .Vertex else FRAGMENT_SHADER_EXT
+	shader_file_path := strings.concatenate({CONTENT_SHADER_PATH, shader_name, extension})
 	defer delete(shader_file_path)
 
 	file_content := content_read_bytes(shader_file_path) or_return

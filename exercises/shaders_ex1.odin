@@ -14,15 +14,15 @@ import glc "lib:glcore"
 _ :: mem
 
 // odinfmt: disable
-
 g_vertices := [?]f32 {
      // positions     // colors
      0.5, -0.5, 0.0,  1.0, 0.0, 0.0,  // bottom right
     -0.5, -0.5, 0.0,  0.0, 1.0, 0.0,  // bottom let
      0.0,  0.5, 0.0,  0.0, 0.0, 1.0,  // top
 }
-
 // odinfmt: enable
+
+g_program_should_close := false
 
 main :: proc() {
 	when ODIN_OS == .Windows {
@@ -42,11 +42,13 @@ main :: proc() {
 
 	glc.print_sdl_version()
 
-	window := glc.create_opengl_window()
-	defer glc.destroy_opengl_window(window)
+	window, gl_ctx := glc.create_opengl_window()
+	defer glc.destroy_opengl_window(window, gl_ctx)
 
 	shader_program :=
-		glc.shader_load_from_files("upside_down_triangle_vertex", "fragment") or_else glc.crash("Error loading shaders")
+		glc.shader_load_from_files("upside_down_triangle", "basic") or_else glc.crash(
+			"Error loading shaders",
+		)
 	defer glc.shader_delete_program(shader_program)
 
 	vbo, vao: u32
@@ -65,9 +67,8 @@ main :: proc() {
 
 	gl.BindVertexArray(0)
 
-	should_close := false
-	for !should_close {
-		should_close = glc.handle_input()
+	for !g_program_should_close {
+		handle_events()
 
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
@@ -78,5 +79,30 @@ main :: proc() {
 		gl.DrawArrays(gl.TRIANGLES, 0, 3)
 
 		sdl.GL_SwapWindow(window)
+	}
+}
+
+process_key_inputs :: proc(keycode: sdl.Keycode) {
+	@(static) use_wireframe: bool
+
+	switch keycode {
+	case sdl.K_ESCAPE:
+		g_program_should_close = true
+	case sdl.K_U:
+		use_wireframe = use_wireframe
+	}
+}
+
+handle_events :: proc() {
+	e: sdl.Event = ---
+	for sdl.PollEvent(&e) {
+		#partial switch e.type {
+		case .KEY_DOWN:
+			process_key_inputs(e.key.key)
+		case .QUIT:
+			g_program_should_close = true
+		case .WINDOW_PIXEL_SIZE_CHANGED:
+			gl.Viewport(0, 0, e.window.data1, e.window.data2)
+		}
 	}
 }
