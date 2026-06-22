@@ -5,6 +5,7 @@ import "core:mem"
 import "core:sys/windows"
 import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
+import stbi "vendor:stb/image"
 
 import "lib:devui"
 import glc "lib:glcore"
@@ -20,10 +21,16 @@ g_state: State
 
 // odinfmt: disable
 g_vertices := [?]f32 {
-     // positions     // colors
-     0.5, -0.5, 0.0,  1.0, 0.0, 0.0,  // bottom right
-    -0.5, -0.5, 0.0,  0.0, 1.0, 0.0,  // bottom let
-     0.0,  0.5, 0.0,  0.0, 0.0, 1.0,  // top
+     // positions      // colors        // texture coords
+     0.5,  0.5, 0.0,   1.0, 0.0, 0.0,   1.0, 1.0,   // top right
+     0.5, -0.5, 0.0,   0.0, 1.0, 0.0,   1.0, 0.0,   // bottom right
+    -0.5, -0.5, 0.0,   0.0, 0.0, 1.0,   0.0, 0.0,   // bottom left
+    -0.5,  0.5, 0.0,   1.0, 1.0, 0.0,   0.0, 1.0,    // top left
+}
+
+g_indices := [?]i32 {
+	0, 1, 3,
+	1, 2, 3,
 }
 // odinfmt: enable
 
@@ -55,21 +62,48 @@ main :: proc() {
 		glc.shader_load_from_files("basic") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(shader_program)
 
-	vbo, vao: u32
+	vbo, vao, ebo: u32
 
 	gl.GenVertexArrays(1, &vao)
+	defer gl.DeleteVertexArrays(1, &vao)
 	gl.BindVertexArray(vao)
 
 	gl.GenBuffers(1, &vbo)
 	defer gl.DeleteBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
 	gl.BufferData(gl.ARRAY_BUFFER, size_of(g_vertices), &g_vertices, gl.STATIC_DRAW)
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 6 * size_of(f32), 0) // position
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 0) // position
 	gl.EnableVertexAttribArray(0)
-	gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, 6 * size_of(f32), 3 * size_of(f32)) // color
+	gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 3 * size_of(f32)) // color
 	gl.EnableVertexAttribArray(1)
+	gl.VertexAttribPointer(2, 2, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 6 * size_of(f32)) // texture coords
+	gl.EnableVertexAttribArray(2)
+
+	gl.GenBuffers(1, &ebo)
+	defer gl.DeleteBuffers(1, &ebo)
+	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
+	gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(g_indices), &g_indices, gl.STATIC_DRAW)
 
 	gl.BindVertexArray(0)
+
+	texture: u32
+	gl.GenTextures(1, &texture)
+	defer gl.DeleteTextures(1, &texture)
+	gl.BindTexture(gl.TEXTURE_2D, texture)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+
+	width, height, channels: i32
+	data := stbi.load("content/textures/container.jpg", &width, &height, &channels, 0)
+	if data != nil {
+		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, width, height, 0, gl.RGB, gl.UNSIGNED_BYTE, data)
+		gl.GenerateMipmap(gl.TEXTURE_2D)
+		stbi.image_free(data)
+	} else {
+		glc.crash("Bad image")
+	}
 
 	for !g_state.program_should_close {
 		handle_events()
@@ -79,12 +113,13 @@ main :: proc() {
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 
+		gl.BindTexture(gl.TEXTURE_2D, texture)
+
 		glc.shader_use_program(shader_program)
-
 		gl.BindVertexArray(vao)
-		gl.DrawArrays(gl.TRIANGLES, 0, 3)
+		gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, nil)
 
-		devui.render_ui("Learning OpenGL", ui_render, ui_render_shortcuts)
+		// devui.render_ui("Learning OpenGL", ui_render, ui_render_shortcuts)
 
 		sdl.GL_SwapWindow(window)
 	}
