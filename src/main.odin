@@ -86,10 +86,10 @@ main :: proc() {
 
 	gl.BindVertexArray(0)
 
-	texture: u32
-	gl.GenTextures(1, &texture)
-	defer gl.DeleteTextures(1, &texture)
-	gl.BindTexture(gl.TEXTURE_2D, texture)
+	texture1, texture2: u32
+	gl.GenTextures(1, &texture1)
+	defer gl.DeleteTextures(1, &texture1)
+	gl.BindTexture(gl.TEXTURE_2D, texture1)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
@@ -105,6 +105,29 @@ main :: proc() {
 		glc.crash("Bad image")
 	}
 
+	gl.GenTextures(1, &texture2)
+	defer gl.DeleteTextures(1, &texture2)
+	gl.BindTexture(gl.TEXTURE_2D, texture2)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+
+	stbi.set_flip_vertically_on_load(1)
+	data = stbi.load("content/textures/awesomeface.png", &width, &height, &channels, 0)
+	if data != nil {
+		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data)
+		gl.GenerateMipmap(gl.TEXTURE_2D)
+		stbi.image_free(data)
+	} else {
+		glc.crash("Bad image")
+	}
+
+	glc.shader_use_program(shader_program)
+	glc.shader_uniform_set(shader_program, "texture1", 0)
+	glc.shader_uniform_set(shader_program, "texture2", 1)
+
+
 	for !g_state.program_should_close {
 		handle_events()
 
@@ -113,13 +136,16 @@ main :: proc() {
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 
-		gl.BindTexture(gl.TEXTURE_2D, texture)
+		gl.ActiveTexture(gl.TEXTURE0)
+		gl.BindTexture(gl.TEXTURE_2D, texture1)
+		gl.ActiveTexture(gl.TEXTURE1)
+		gl.BindTexture(gl.TEXTURE_2D, texture2)
 
 		glc.shader_use_program(shader_program)
 		gl.BindVertexArray(vao)
 		gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, nil)
 
-		// devui.render_ui("Learning OpenGL", ui_render, ui_render_shortcuts)
+		devui.render_ui("Learning OpenGL", ui_render, ui_render_shortcuts)
 
 		sdl.GL_SwapWindow(window)
 	}
