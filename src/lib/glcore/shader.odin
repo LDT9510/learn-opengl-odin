@@ -2,7 +2,7 @@ package glcore
 
 import "core:c"
 import "core:log"
-import "core:math/linalg"
+import glm "core:math/linalg/glsl"
 import "core:strings"
 import gl "vendor:OpenGL"
 
@@ -163,7 +163,7 @@ shader_uniform_set_vec4_f :: proc(
 shader_uniform_set_vec2_v :: proc(
 	program_id: Shader_Program_Handle,
 	name: cstring,
-	value: linalg.Vector2f32,
+	value: glm.vec2,
 ) {
 	gl.Uniform2f(gl.GetUniformLocation(cast(u32)program_id, name), value.x, value.y)
 }
@@ -171,7 +171,7 @@ shader_uniform_set_vec2_v :: proc(
 shader_uniform_set_vec3_v :: proc(
 	program_id: Shader_Program_Handle,
 	name: cstring,
-	value: linalg.Vector3f32,
+	value: glm.vec3,
 ) {
 	gl.Uniform3f(gl.GetUniformLocation(cast(u32)program_id, name), value.x, value.y, value.z)
 }
@@ -179,7 +179,7 @@ shader_uniform_set_vec3_v :: proc(
 shader_uniform_set_vec4_v :: proc(
 	program_id: Shader_Program_Handle,
 	name: cstring,
-	value: linalg.Vector4f32,
+	value: glm.vec4,
 ) {
 	gl.Uniform4f(
 		gl.GetUniformLocation(cast(u32)program_id, name),
@@ -193,7 +193,7 @@ shader_uniform_set_vec4_v :: proc(
 shader_uniform_set_mat2 :: proc(
 	program_id: Shader_Program_Handle,
 	name: cstring,
-	value: ^linalg.Matrix2x2f32,
+	value: ^glm.mat2,
 ) {
 	gl.UniformMatrix2fv(gl.GetUniformLocation(cast(u32)program_id, name), 1, false, &value[0][0])
 }
@@ -201,7 +201,7 @@ shader_uniform_set_mat2 :: proc(
 shader_uniform_set_mat3 :: proc(
 	program_id: Shader_Program_Handle,
 	name: cstring,
-	value: ^linalg.Matrix3x3f32,
+	value: ^glm.mat3,
 ) {
 	gl.UniformMatrix3fv(gl.GetUniformLocation(cast(u32)program_id, name), 1, false, &value[0][0])
 }
@@ -209,7 +209,7 @@ shader_uniform_set_mat3 :: proc(
 shader_uniform_set_mat4 :: proc(
 	program_id: Shader_Program_Handle,
 	name: cstring,
-	value: ^linalg.Matrix4x4f32,
+	value: ^glm.mat4,
 ) {
 	gl.UniformMatrix4fv(gl.GetUniformLocation(cast(u32)program_id, name), 1, false, &value[0][0])
 }

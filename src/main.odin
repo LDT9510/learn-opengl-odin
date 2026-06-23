@@ -1,6 +1,7 @@
 package learn_opengl
 
 import "core:log"
+import glm "core:math/linalg/glsl"
 import "core:mem"
 import "core:sys/windows"
 import gl "vendor:OpenGL"
@@ -58,8 +59,7 @@ main :: proc() {
 	devui.init_for_sdl_window(window, gl_ctx)
 	defer devui.destroy()
 
-	shader_program :=
-		glc.shader_load_from_files("main") or_else glc.crash("Error loading shaders")
+	shader_program := glc.shader_load_from_files("main") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(shader_program)
 
 	vbo, vao, ebo: u32
@@ -127,6 +127,8 @@ main :: proc() {
 	glc.shader_uniform_set(shader_program, "texture1", 0)
 	glc.shader_uniform_set(shader_program, "texture2", 1)
 
+	trans := glm.mat4Rotate({0, 0, 1}, glm.radians_f32(90.0))
+	trans *= glm.mat4Scale({0.5, 0.5, 0.5})
 
 	for !g_state.program_should_close {
 		handle_events()
@@ -142,6 +144,8 @@ main :: proc() {
 		gl.BindTexture(gl.TEXTURE_2D, texture2)
 
 		glc.shader_use_program(shader_program)
+		glc.shader_uniform_set(shader_program, "transform", &trans)
+
 		gl.BindVertexArray(vao)
 		gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, nil)
 
