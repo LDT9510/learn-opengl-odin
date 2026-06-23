@@ -36,11 +36,6 @@ begin_frame :: proc() {
 render_frame :: proc() {
 	im.Render()
 	im_gl.RenderDrawData(im.GetDrawData())
-
-	// backup_current_context := sdl.GL_GetCurrentContext()
-	// im.UpdatePlatformWindows()
-	// im.RenderPlatformWindowsDefault()
-	// sdl.GL_MakeCurrent(backup_current_window, backup_current_context)
 }
 
 process_event :: proc(event: ^sdl.Event) {

@@ -59,7 +59,7 @@ main :: proc() {
 	defer devui.destroy()
 
 	shader_program :=
-		glc.shader_load_from_files("basic") or_else glc.crash("Error loading shaders")
+		glc.shader_load_from_files("main") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(shader_program)
 
 	vbo, vao, ebo: u32

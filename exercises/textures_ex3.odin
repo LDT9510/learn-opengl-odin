@@ -203,6 +203,7 @@ ui_render :: proc() {
 	) {
 		g_state.container_wrap.s = texture_wrap_mode_mapping[g_state.ui.selected_wrap_s]
 	}
+
 	if im.Combo(
 		"Container wrap T",
 		cast(^i32)&g_state.ui.selected_wrap_t,
@@ -210,6 +211,7 @@ ui_render :: proc() {
 	) {
 		g_state.container_wrap.t = texture_wrap_mode_mapping[g_state.ui.selected_wrap_t]
 	}
+
 	if im.Combo("Texture Filter", cast(^i32)&g_state.ui.selected_filter, texture_filter_titles) {
 		g_state.texture_filter = texture_filter_mapping[g_state.ui.selected_filter]
 	}
@@ -230,7 +232,7 @@ process_key_inputs :: proc(keycode: sdl.Keycode) {
 }
 
 handle_events :: proc() {
-	e: sdl.Event = ---
+	e: sdl.Event
 	for sdl.PollEvent(&e) {
 		devui.process_event(&e)
 
