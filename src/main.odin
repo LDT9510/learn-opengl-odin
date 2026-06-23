@@ -127,9 +127,6 @@ main :: proc() {
 	glc.shader_uniform_set(shader_program, "texture1", 0)
 	glc.shader_uniform_set(shader_program, "texture2", 1)
 
-	trans := glm.mat4Rotate({0, 0, 1}, glm.radians_f32(90.0))
-	trans *= glm.mat4Scale({0.5, 0.5, 0.5})
-
 	for !g_state.program_should_close {
 		handle_events()
 
@@ -144,6 +141,9 @@ main :: proc() {
 		gl.BindTexture(gl.TEXTURE_2D, texture2)
 
 		glc.shader_use_program(shader_program)
+
+		trans := glm.mat4Translate({0.5, -0.5, 0.0})
+		trans *= glm.mat4Rotate({0, 0, 1}, cast(f32)glc.timing_get_elapsed_seconds())
 		glc.shader_uniform_set(shader_program, "transform", &trans)
 
 		gl.BindVertexArray(vao)
