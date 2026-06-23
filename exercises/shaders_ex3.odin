@@ -1,6 +1,6 @@
 // Outputting the vertex position to the fragment shader and using it as fragment color
 
-// Question response:
+// Question answer:
 // The output of our fragment's color is equal to the (interpolated) coordinate of
 // the triangle. What is the coordinate of the bottom-left point of our triangle?
 // This is (-0.5f, -0.5f, 0.0f). Since the xy values are negative they are clamped to
