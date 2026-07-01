@@ -64,6 +64,20 @@ g_cube_vertices := [?]f32 {
     -0.5,  0.5,  0.5,  0.0, 0.0,
     -0.5,  0.5, -0.5,  0.0, 1.0,
 }
+
+g_cube_positions := [?]glm.vec3 {
+	{ 0.0,  0.0,  0.0},
+	{ 2.0,  5.0, -15.0},
+    {-1.5, -2.2, -2.5},
+    {-3.8, -2.0, -12.3},
+    { 2.4, -0.4, -3.5},
+    {-1.7,  3.0, -7.5},
+    { 1.3, -2.0, -2.5},
+    { 1.5,  2.0, -2.5},
+    { 1.5,  0.2, -1.5},
+    {-1.3,  1.0, -1.5},
+}
+
 // odinfmt: enable
 
 main :: proc() {
@@ -152,7 +166,12 @@ main :: proc() {
 	glc.shader_uniform_set(shader_program, "texture2", 1)
 
 	view := glm.mat4Translate({0, 0, -3})
-	proj := glm.mat4Perspective(glm.radians_f32(45), glc.window_get_aspect_ratio(window) , 0.1, 100.0)
+	proj := glm.mat4Perspective(
+		glm.radians_f32(45),
+		glc.window_get_aspect_ratio(window),
+		0.1,
+		100.0,
+	)
 
 	gl.Enable(gl.DEPTH_TEST)
 
@@ -169,16 +188,18 @@ main :: proc() {
 		gl.ActiveTexture(gl.TEXTURE1)
 		gl.BindTexture(gl.TEXTURE_2D, texture2)
 
-		model := glm.mat4Rotate({0.5, 1, 0}, glm.radians_f32(50) * cast(f32)glc.timing_get_elapsed_seconds())
-
 		glc.shader_use_program(shader_program)
-
-		glc.shader_uniform_set(shader_program, "model", &model)
 		glc.shader_uniform_set(shader_program, "view", &view)
 		glc.shader_uniform_set(shader_program, "projection", &proj)
 
 		gl.BindVertexArray(vao)
-		gl.DrawArrays(gl.TRIANGLES, 0, 36)
+		for p, i in g_cube_positions {
+			model := glm.mat4Translate(p)
+			angle := 20.0 * cast(f32)i
+			model *= glm.mat4Rotate({1, 0.3, 0.5}, glm.radians_f32(angle))
+			glc.shader_uniform_set(shader_program, "model", &model)
+			gl.DrawArrays(gl.TRIANGLES, 0, 36)
+		}
 
 		devui.render_ui("Learning OpenGL", ui_render, ui_render_shortcuts)
 
