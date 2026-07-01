@@ -49,10 +49,5 @@ set collections=^
 set final_command=odin build %input% %main_flags% %warnings% %collections% %defines%
 
 echo Running: %final_command%
-%final_command%
 
-if %ERRORLEVEL% equ 0 (
-	.bin\%executable%
-) else (
-	exit 1
-)
+%final_command% && .bin\%executable%
