@@ -21,17 +21,48 @@ State :: struct {
 g_state: State
 
 // odinfmt: disable
-g_vertices := [?]f32 {
-     // positions      // texture coords
-     0.5,  0.5, 0.0,   1.0, 1.0,   // top right
-     0.5, -0.5, 0.0,   1.0, 0.0,   // bottom right
-    -0.5, -0.5, 0.0,   0.0, 0.0,   // bottom left
-    -0.5,  0.5, 0.0,   0.0, 1.0,    // top left
-}
+g_cube_vertices := [?]f32 {
+    -0.5, -0.5, -0.5,  0.0, 0.0,
+     0.5, -0.5, -0.5,  1.0, 0.0,
+     0.5,  0.5, -0.5,  1.0, 1.0,
+     0.5,  0.5, -0.5,  1.0, 1.0,
+    -0.5,  0.5, -0.5,  0.0, 1.0,
+    -0.5, -0.5, -0.5,  0.0, 0.0,
 
-g_indices := [?]i32 {
-	0, 1, 3,
-	1, 2, 3,
+    -0.5, -0.5,  0.5,  0.0, 0.0,
+     0.5, -0.5,  0.5,  1.0, 0.0,
+     0.5,  0.5,  0.5,  1.0, 1.0,
+     0.5,  0.5,  0.5,  1.0, 1.0,
+    -0.5,  0.5,  0.5,  0.0, 1.0,
+    -0.5, -0.5,  0.5,  0.0, 0.0,
+
+    -0.5,  0.5,  0.5,  1.0, 0.0,
+    -0.5,  0.5, -0.5,  1.0, 1.0,
+    -0.5, -0.5, -0.5,  0.0, 1.0,
+    -0.5, -0.5, -0.5,  0.0, 1.0,
+    -0.5, -0.5,  0.5,  0.0, 0.0,
+    -0.5,  0.5,  0.5,  1.0, 0.0,
+
+     0.5,  0.5,  0.5,  1.0, 0.0,
+     0.5,  0.5, -0.5,  1.0, 1.0,
+     0.5, -0.5, -0.5,  0.0, 1.0,
+     0.5, -0.5, -0.5,  0.0, 1.0,
+     0.5, -0.5,  0.5,  0.0, 0.0,
+     0.5,  0.5,  0.5,  1.0, 0.0,
+
+    -0.5, -0.5, -0.5,  0.0, 1.0,
+     0.5, -0.5, -0.5,  1.0, 1.0,
+     0.5, -0.5,  0.5,  1.0, 0.0,
+     0.5, -0.5,  0.5,  1.0, 0.0,
+    -0.5, -0.5,  0.5,  0.0, 0.0,
+    -0.5, -0.5, -0.5,  0.0, 1.0,
+
+    -0.5,  0.5, -0.5,  0.0, 1.0,
+     0.5,  0.5, -0.5,  1.0, 1.0,
+     0.5,  0.5,  0.5,  1.0, 0.0,
+     0.5,  0.5,  0.5,  1.0, 0.0,
+    -0.5,  0.5,  0.5,  0.0, 0.0,
+    -0.5,  0.5, -0.5,  0.0, 1.0,
 }
 // odinfmt: enable
 
@@ -62,7 +93,7 @@ main :: proc() {
 	shader_program := glc.shader_load_from_files("main") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(shader_program)
 
-	vbo, vao, ebo: u32
+	vbo, vao: u32
 
 	gl.GenVertexArrays(1, &vao)
 	defer gl.DeleteVertexArrays(1, &vao)
@@ -71,16 +102,11 @@ main :: proc() {
 	gl.GenBuffers(1, &vbo)
 	defer gl.DeleteBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	gl.BufferData(gl.ARRAY_BUFFER, size_of(g_vertices), &g_vertices, gl.STATIC_DRAW)
+	gl.BufferData(gl.ARRAY_BUFFER, size_of(g_cube_vertices), &g_cube_vertices, gl.STATIC_DRAW)
 	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 0) // position
 	gl.EnableVertexAttribArray(0)
 	gl.VertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 3 * size_of(f32)) // texture coords
 	gl.EnableVertexAttribArray(1)
-
-	gl.GenBuffers(1, &ebo)
-	defer gl.DeleteBuffers(1, &ebo)
-	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
-	gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(g_indices), &g_indices, gl.STATIC_DRAW)
 
 	gl.BindVertexArray(0)
 
@@ -125,9 +151,10 @@ main :: proc() {
 	glc.shader_uniform_set(shader_program, "texture1", 0)
 	glc.shader_uniform_set(shader_program, "texture2", 1)
 
-	model := glm.mat4Rotate({1, 0, 0}, glm.radians_f32(-55))
 	view := glm.mat4Translate({0, 0, -3})
 	proj := glm.mat4Perspective(glm.radians_f32(45), glc.window_get_aspect_ratio(window) , 0.1, 100.0)
+
+	gl.Enable(gl.DEPTH_TEST)
 
 	for !g_state.program_should_close {
 		handle_events()
@@ -135,12 +162,14 @@ main :: proc() {
 		gl.PolygonMode(gl.FRONT_AND_BACK, g_state.use_wireframe ? gl.LINE : gl.FILL)
 
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
-		gl.Clear(gl.COLOR_BUFFER_BIT)
+		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 		gl.ActiveTexture(gl.TEXTURE0)
 		gl.BindTexture(gl.TEXTURE_2D, texture1)
 		gl.ActiveTexture(gl.TEXTURE1)
 		gl.BindTexture(gl.TEXTURE_2D, texture2)
+
+		model := glm.mat4Rotate({0.5, 1, 0}, glm.radians_f32(50) * cast(f32)glc.timing_get_elapsed_seconds())
 
 		glc.shader_use_program(shader_program)
 
@@ -149,7 +178,7 @@ main :: proc() {
 		glc.shader_uniform_set(shader_program, "projection", &proj)
 
 		gl.BindVertexArray(vao)
-		gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, nil)
+		gl.DrawArrays(gl.TRIANGLES, 0, 36)
 
 		devui.render_ui("Learning OpenGL", ui_render, ui_render_shortcuts)
 
