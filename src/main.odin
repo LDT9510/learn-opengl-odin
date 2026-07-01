@@ -22,11 +22,11 @@ g_state: State
 
 // odinfmt: disable
 g_vertices := [?]f32 {
-     // positions      // colors        // texture coords
-     0.5,  0.5, 0.0,   1.0, 0.0, 0.0,   1.0, 1.0,   // top right
-     0.5, -0.5, 0.0,   0.0, 1.0, 0.0,   1.0, 0.0,   // bottom right
-    -0.5, -0.5, 0.0,   0.0, 0.0, 1.0,   0.0, 0.0,   // bottom left
-    -0.5,  0.5, 0.0,   1.0, 1.0, 0.0,   0.0, 1.0,    // top left
+     // positions      // texture coords
+     0.5,  0.5, 0.0,   1.0, 1.0,   // top right
+     0.5, -0.5, 0.0,   1.0, 0.0,   // bottom right
+    -0.5, -0.5, 0.0,   0.0, 0.0,   // bottom left
+    -0.5,  0.5, 0.0,   0.0, 1.0,    // top left
 }
 
 g_indices := [?]i32 {
@@ -72,12 +72,10 @@ main :: proc() {
 	defer gl.DeleteBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
 	gl.BufferData(gl.ARRAY_BUFFER, size_of(g_vertices), &g_vertices, gl.STATIC_DRAW)
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 0) // position
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 0) // position
 	gl.EnableVertexAttribArray(0)
-	gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 3 * size_of(f32)) // color
+	gl.VertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 3 * size_of(f32)) // texture coords
 	gl.EnableVertexAttribArray(1)
-	gl.VertexAttribPointer(2, 2, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 6 * size_of(f32)) // texture coords
-	gl.EnableVertexAttribArray(2)
 
 	gl.GenBuffers(1, &ebo)
 	defer gl.DeleteBuffers(1, &ebo)
@@ -127,6 +125,10 @@ main :: proc() {
 	glc.shader_uniform_set(shader_program, "texture1", 0)
 	glc.shader_uniform_set(shader_program, "texture2", 1)
 
+	model := glm.mat4Rotate({1, 0, 0}, glm.radians_f32(-55))
+	view := glm.mat4Translate({0, 0, -3})
+	proj := glm.mat4Perspective(glm.radians_f32(45), glc.window_get_aspect_ratio(window) , 0.1, 100.0)
+
 	for !g_state.program_should_close {
 		handle_events()
 
@@ -142,9 +144,9 @@ main :: proc() {
 
 		glc.shader_use_program(shader_program)
 
-		trans := glm.mat4Translate({0.5, -0.5, 0.0})
-		trans *= glm.mat4Rotate({0, 0, 1}, cast(f32)glc.timing_get_elapsed_seconds())
-		glc.shader_uniform_set(shader_program, "transform", &trans)
+		glc.shader_uniform_set(shader_program, "model", &model)
+		glc.shader_uniform_set(shader_program, "view", &view)
+		glc.shader_uniform_set(shader_program, "projection", &proj)
 
 		gl.BindVertexArray(vao)
 		gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, nil)

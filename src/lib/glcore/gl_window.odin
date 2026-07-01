@@ -54,6 +54,17 @@ create_opengl_window :: proc() -> (window: ^sdl.Window, gl_ctx: sdl.GLContext) {
 	return window, gl_ctx
 }
 
+window_get_resolution :: proc(window: ^sdl.Window) -> (f32, f32) {
+	x, y: i32
+	sdl.GetWindowSize(window, &x, &y)
+	return cast(f32)x, cast(f32)y
+}
+
+window_get_aspect_ratio :: proc(window: ^sdl.Window) -> f32 {
+	x, y := window_get_resolution(window)
+	return x / y
+}
+
 destroy_opengl_window :: proc(window: ^sdl.Window, gl_context: sdl.GLContext) {
 	sdl.DestroyWindow(window)
 	sdl.GL_DestroyContext(gl_context)
