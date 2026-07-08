@@ -112,9 +112,10 @@ main :: proc() {
 	devui.init_for_sdl_window(window, gl_ctx)
 	defer devui.destroy()
 
-	g_state.ui.fov = 45.0
-	g_state.ui.aspect_ratio = glc.window_get_aspect_ratio(window)
-	g_state.view_translation = {0, 0, -3}
+	g_state = {
+		ui = {fov = 45.0, aspect_ratio = glc.window_get_aspect_ratio(window)},
+		view_translation = {0, 0, -3},
+	}
 
 	shader_program :=
 		glc.shader_load_from_files("coordinate_systems") or_else glc.crash("Error loading shaders")
@@ -211,7 +212,10 @@ main :: proc() {
 			model := glm.mat4Translate(p)
 			angle := 20.0 * cast(f32)i
 			if i % 3 == 0 {
-				model *= glm.mat4Rotate({1, 0.3, 0.5}, glm.radians_f32(angle) * cast(f32)glc.timing_get_elapsed_seconds())
+				model *= glm.mat4Rotate(
+					{1, 0.3, 0.5},
+					glm.radians_f32(angle) * cast(f32)glc.timing_get_elapsed_seconds(),
+				)
 			} else {
 				model *= glm.mat4Rotate({1, 0.3, 0.5}, glm.radians_f32(angle))
 			}

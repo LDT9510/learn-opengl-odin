@@ -42,6 +42,14 @@ process_event :: proc(event: ^sdl.Event) {
 	im_sdl.ProcessEvent(event)
 }
 
+wants_mouse_input :: proc() -> bool {
+	return im.GetIO().WantCaptureMouse
+}
+
+wants_keyboard_input :: proc() -> bool {
+	return im.GetIO().WantCaptureKeyboard
+}
+
 destroy :: proc() {
 	im_gl.Shutdown()
 	im_sdl.Shutdown()

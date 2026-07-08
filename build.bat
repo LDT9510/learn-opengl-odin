@@ -40,7 +40,8 @@ set warnings=^
 	-vet-semicolon^
 	-vet-style^
 	-vet-tabs^
-	-warnings-as-errors
+	-warnings-as-errors^
+	-strict-style
 
 set collections=^
 	-collection:lib=src\lib^

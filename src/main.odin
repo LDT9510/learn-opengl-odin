@@ -17,10 +17,15 @@ _ :: mem
 State :: struct {
 	use_wireframe:        bool,
 	program_should_close: bool,
+	camera:               glc.Camera,
+	window:               ^sdl.Window,
+	is_capturing_mouse:   bool,
+	show_ui:              bool,
 }
 g_state: State
 
 // odinfmt: disable
+@(rodata)
 g_cube_vertices := [?]f32 {
     -0.5, -0.5, -0.5,  0.0, 0.0,
      0.5, -0.5, -0.5,  1.0, 0.0,
@@ -65,6 +70,7 @@ g_cube_vertices := [?]f32 {
     -0.5,  0.5, -0.5,  0.0, 1.0,
 }
 
+@(rodata)
 g_cube_positions := [?]glm.vec3 {
 	{ 0.0,  0.0,  0.0},
 	{ 2.0,  5.0, -15.0},
@@ -98,10 +104,23 @@ main :: proc() {
 
 	glc.print_sdl_version()
 
-	window, gl_ctx := glc.create_opengl_window()
-	defer glc.destroy_opengl_window(window, gl_ctx)
+	// intial state
+	g_state = {
+		camera             = glc.camera_create(
+			pos = {0.0, 0.0, -3.0},
+			up = {0.0, 1.0, 0.0},
+			yaw = -9.0,
+			pitch = -25.0,
+		),
+		is_capturing_mouse = false,
+		show_ui            = true,
+	}
 
-	devui.init_for_sdl_window(window, gl_ctx)
+	gl_ctx: sdl.GLContext
+	g_state.window, gl_ctx = glc.create_opengl_window()
+	defer glc.destroy_opengl_window(g_state.window, gl_ctx)
+
+	devui.init_for_sdl_window(g_state.window, gl_ctx)
 	defer devui.destroy()
 
 	shader_program := glc.shader_load_from_files("main") or_else glc.crash("Error loading shaders")
@@ -165,18 +184,15 @@ main :: proc() {
 	glc.shader_uniform_set(shader_program, "texture1", 0)
 	glc.shader_uniform_set(shader_program, "texture2", 1)
 
-	view := glm.mat4Translate({0, 0, -3})
-	proj := glm.mat4Perspective(
-		glm.radians_f32(45),
-		glc.window_get_aspect_ratio(window),
-		0.1,
-		100.0,
-	)
 
 	gl.Enable(gl.DEPTH_TEST)
 
 	for !g_state.program_should_close {
-		handle_events()
+		glc.events_handle(
+			process_events,
+			process_key_input,
+		)
+		glc.timing_update_delta_time()
 
 		gl.PolygonMode(gl.FRONT_AND_BACK, g_state.use_wireframe ? gl.LINE : gl.FILL)
 
@@ -187,6 +203,14 @@ main :: proc() {
 		gl.BindTexture(gl.TEXTURE_2D, texture1)
 		gl.ActiveTexture(gl.TEXTURE1)
 		gl.BindTexture(gl.TEXTURE_2D, texture2)
+
+		view := glc.camera_get_view_matrix(g_state.camera)
+		proj := glm.mat4Perspective(
+			glm.radians(g_state.camera.zoom),
+			glc.window_get_aspect_ratio(g_state.window),
+			0.1,
+			100.0,
+		)
 
 		glc.shader_use_program(shader_program)
 		glc.shader_uniform_set(shader_program, "view", &view)
@@ -201,41 +225,57 @@ main :: proc() {
 			gl.DrawArrays(gl.TRIANGLES, 0, 36)
 		}
 
-		devui.render_ui("Learning OpenGL", ui_render, ui_render_shortcuts)
+		if (g_state.show_ui) {
+			devui.render_ui("Learning OpenGL", ui_render, ui_render_shortcuts)
+		}
 
-		sdl.GL_SwapWindow(window)
+		sdl.GL_SwapWindow(g_state.window)
 	}
 }
 
 ui_render :: proc() {
+	glc.camera_dev_ui_frame(&g_state.camera)
 }
 
 ui_render_shortcuts :: proc() {
 	devui.shortcut("ESC", "Close program")
-	devui.shortcut("  U", "Enables wireframe mode")
+	devui.shortcut("U", "Enables wireframe mode")
+	devui.shortcut("I", "Togle UI")
+	devui.shortcut("(Shift +)WASD", "(Sprint) Camera move")
+	devui.shortcut("Right click (hold)", "Look around")
 }
 
-process_key_inputs :: proc(keycode: sdl.Keycode) {
-	switch keycode {
-	case sdl.K_ESCAPE:
-		g_state.program_should_close = true
-	case sdl.K_U:
-		g_state.use_wireframe = !g_state.use_wireframe
+process_events :: proc(event: sdl.Event) {
+	if (glc.events_is_mouse_button_pressed({.RIGHT})) {
+		g_state.is_capturing_mouse = true
+	} else {
+		g_state.is_capturing_mouse = false
 	}
-}
+	_ = sdl.SetWindowRelativeMouseMode(g_state.window, g_state.is_capturing_mouse)
 
-handle_events :: proc() {
-	e: sdl.Event = ---
-	for sdl.PollEvent(&e) {
-		devui.process_event(&e)
-
-		#partial switch e.type {
-		case .KEY_DOWN:
-			process_key_inputs(e.key.key)
-		case .QUIT:
-			g_state.program_should_close = true
-		case .WINDOW_PIXEL_SIZE_CHANGED:
-			gl.Viewport(0, 0, e.window.data1, e.window.data2)
+	#partial switch event.type {
+	case .QUIT:
+		g_state.program_should_close = true
+	case .WINDOW_PIXEL_SIZE_CHANGED:
+		gl.Viewport(0, 0, event.window.data1, event.window.data2)
+	case .MOUSE_WHEEL:
+		glc.camera_on_mouse_wheel_scroll(&g_state.camera, event.wheel.y)
+	case .MOUSE_MOTION:
+		if (g_state.is_capturing_mouse) {
+			glc.camera_on_mouse_move(&g_state.camera, event.motion.xrel, -event.motion.yrel, true)
 		}
 	}
+}
+
+process_key_input :: proc() {
+	switch {
+	case glc.events_is_key_just_pressed(.ESCAPE):
+		g_state.program_should_close = true
+	case glc.events_is_key_just_pressed(.U):
+		g_state.use_wireframe = !g_state.use_wireframe
+	case glc.events_is_key_just_pressed(.I):
+		g_state.show_ui = !g_state.show_ui
+	}
+
+	glc.camera_handle_input(&g_state.camera)
 }

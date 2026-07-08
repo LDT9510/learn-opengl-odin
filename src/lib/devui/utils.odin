@@ -10,7 +10,7 @@ render_shortcuts :: proc(shortcuts_ui_proc: ShortcutsProc) {
 		TABLE_FLAGS :: im.TableFlags_RowBg | im.TableFlags_Borders
 		if im.BeginTable("shortcuts", 2, TABLE_FLAGS) {
 			defer im.EndTable()
-			im.TableSetupColumn("Key", {.WidthFixed}, 30.0)
+			im.TableSetupColumn("Key", {.WidthFixed}, 120.0)
 			im.TableSetupColumn("Description", {.WidthStretch})
 			im.TableHeadersRow()
 			im.TableNextRow()

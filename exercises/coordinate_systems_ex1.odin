@@ -111,8 +111,9 @@ main :: proc() {
 	devui.init_for_sdl_window(window, gl_ctx)
 	defer devui.destroy()
 
-	g_state.ui.fov = 45.0
-	g_state.ui.aspect_ratio = glc.window_get_aspect_ratio(window)
+	g_state = {
+		ui = {fov = 45.0, aspect_ratio = glc.window_get_aspect_ratio(window)},
+	}
 
 	shader_program :=
 		glc.shader_load_from_files("coordinate_systems") or_else glc.crash("Error loading shaders")
