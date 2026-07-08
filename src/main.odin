@@ -26,7 +26,7 @@ g_state: State
 
 // odinfmt: disable
 @(rodata)
-g_cube_vertices := [?]f32 {
+CUBE_VERTICES := [?]f32 {
     -0.5, -0.5, -0.5,  0.0, 0.0,
      0.5, -0.5, -0.5,  1.0, 0.0,
      0.5,  0.5, -0.5,  1.0, 1.0,
@@ -71,7 +71,7 @@ g_cube_vertices := [?]f32 {
 }
 
 @(rodata)
-g_cube_positions := [?]glm.vec3 {
+CUBE_POSITIONS := [?]glm.vec3 {
 	{ 0.0,  0.0,  0.0},
 	{ 2.0,  5.0, -15.0},
     {-1.5, -2.2, -2.5},
@@ -135,7 +135,7 @@ main :: proc() {
 	gl.GenBuffers(1, &vbo)
 	defer gl.DeleteBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	gl.BufferData(gl.ARRAY_BUFFER, size_of(g_cube_vertices), &g_cube_vertices, gl.STATIC_DRAW)
+	gl.BufferData(gl.ARRAY_BUFFER, size_of(CUBE_VERTICES), &CUBE_VERTICES, gl.STATIC_DRAW)
 	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 0) // position
 	gl.EnableVertexAttribArray(0)
 	gl.VertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 3 * size_of(f32)) // texture coords
@@ -188,10 +188,7 @@ main :: proc() {
 	gl.Enable(gl.DEPTH_TEST)
 
 	for !g_state.program_should_close {
-		glc.events_handle(
-			process_events,
-			process_key_input,
-		)
+		glc.events_handle(process_events, process_key_input)
 		glc.timing_update_delta_time()
 
 		gl.PolygonMode(gl.FRONT_AND_BACK, g_state.use_wireframe ? gl.LINE : gl.FILL)
@@ -217,7 +214,7 @@ main :: proc() {
 		glc.shader_uniform_set(shader_program, "projection", &proj)
 
 		gl.BindVertexArray(vao)
-		for p, i in g_cube_positions {
+		for p, i in CUBE_POSITIONS {
 			model := glm.mat4Translate(p)
 			angle := 20.0 * cast(f32)i
 			model *= glm.mat4Rotate({1, 0.3, 0.5}, glm.radians_f32(angle))

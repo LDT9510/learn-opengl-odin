@@ -1,4 +1,4 @@
-// Translate the view matrix
+// Rotate over time every third container including the first, while leaving others static
 
 package learn_opengl
 
@@ -118,7 +118,7 @@ main :: proc() {
 	}
 
 	shader_program :=
-		glc.shader_load_from_files("coordinate_systems") or_else glc.crash("Error loading shaders")
+		glc.shader_load_from_files("main") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(shader_program)
 
 	vbo, vao: u32
@@ -211,7 +211,14 @@ main :: proc() {
 		for p, i in g_cube_positions {
 			model := glm.mat4Translate(p)
 			angle := 20.0 * cast(f32)i
-			model *= glm.mat4Rotate({1, 0.3, 0.5}, glm.radians_f32(angle))
+			if i % 3 == 0 {
+				model *= glm.mat4Rotate(
+					{1, 0.3, 0.5},
+					glm.radians_f32(angle) * cast(f32)glc.timing_get_elapsed_seconds(),
+				)
+			} else {
+				model *= glm.mat4Rotate({1, 0.3, 0.5}, glm.radians_f32(angle))
+			}
 			glc.shader_uniform_set(shader_program, "model", &model)
 			gl.DrawArrays(gl.TRIANGLES, 0, 36)
 		}

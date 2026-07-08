@@ -66,14 +66,16 @@ camera_handle_input :: proc(c: ^Camera) {
 
 	velocity := speed * glc.g_delta_time
 
-	switch {
-	case glc.events_is_key_pressed(.W):
+	if glc.events_is_key_pressed(.W) {
 		c.position += c.front * velocity
-	case glc.events_is_key_pressed(.S):
+	}
+	if glc.events_is_key_pressed(.S) {
 		c.position -= c.front * velocity
-	case glc.events_is_key_pressed(.A):
+	}
+	if glc.events_is_key_pressed(.A) {
 		c.position -= c.right * velocity
-	case glc.events_is_key_pressed(.D):
+	}
+	if glc.events_is_key_pressed(.D) {
 		c.position += c.right * velocity
 	}
 }

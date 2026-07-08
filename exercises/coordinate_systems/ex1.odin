@@ -1,4 +1,4 @@
-// Rotate over time every third container including the first, while leaving others static
+// Experimenting with field of view and aspect ratio parameters for projection
 
 package learn_opengl
 
@@ -24,7 +24,6 @@ State :: struct {
 		fov:          f32,
 		aspect_ratio: f32,
 	},
-	view_translation:     glm.vec3,
 }
 g_state: State
 
@@ -114,11 +113,10 @@ main :: proc() {
 
 	g_state = {
 		ui = {fov = 45.0, aspect_ratio = glc.window_get_aspect_ratio(window)},
-		view_translation = {0, 0, -3},
 	}
 
 	shader_program :=
-		glc.shader_load_from_files("coordinate_systems") or_else glc.crash("Error loading shaders")
+		glc.shader_load_from_files("main") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(shader_program)
 
 	vbo, vao: u32
@@ -179,6 +177,7 @@ main :: proc() {
 	glc.shader_uniform_set(shader_program, "texture1", 0)
 	glc.shader_uniform_set(shader_program, "texture2", 1)
 
+	view := glm.mat4Translate({0, 0, -3})
 
 	gl.Enable(gl.DEPTH_TEST)
 
@@ -195,7 +194,6 @@ main :: proc() {
 		gl.ActiveTexture(gl.TEXTURE1)
 		gl.BindTexture(gl.TEXTURE_2D, texture2)
 
-		view := glm.mat4Translate(g_state.view_translation)
 		proj := glm.mat4Perspective(
 			glm.radians_f32(g_state.ui.fov),
 			g_state.ui.aspect_ratio,
@@ -211,14 +209,7 @@ main :: proc() {
 		for p, i in g_cube_positions {
 			model := glm.mat4Translate(p)
 			angle := 20.0 * cast(f32)i
-			if i % 3 == 0 {
-				model *= glm.mat4Rotate(
-					{1, 0.3, 0.5},
-					glm.radians_f32(angle) * cast(f32)glc.timing_get_elapsed_seconds(),
-				)
-			} else {
-				model *= glm.mat4Rotate({1, 0.3, 0.5}, glm.radians_f32(angle))
-			}
+			model *= glm.mat4Rotate({1, 0.3, 0.5}, glm.radians_f32(angle))
 			glc.shader_uniform_set(shader_program, "model", &model)
 			gl.DrawArrays(gl.TRIANGLES, 0, 36)
 		}
@@ -232,7 +223,6 @@ main :: proc() {
 ui_render :: proc() {
 	im.SliderFloat("FoV", &g_state.ui.fov, 0.0, 180.0)
 	im.SliderFloat("Aspect Ratio", &g_state.ui.aspect_ratio, 0.0, 2.0)
-	im.SliderFloat3("View translate", &g_state.view_translation, -10.0, 10.0)
 }
 
 ui_render_shortcuts :: proc() {

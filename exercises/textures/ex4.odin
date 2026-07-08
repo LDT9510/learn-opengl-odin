@@ -1,4 +1,4 @@
-// Experiment with texture wrapping methods, displaying 4 smiley faces on a single container clamped at edge
+// Use a uniform to control image mixing
 
 package learn_opengl
 
@@ -30,28 +30,43 @@ texture_wrap_mode_mapping := [Texture_Wrap_Mode]i32 {
 	.Clamp_to_Border = gl.CLAMP_TO_BORDER,
 }
 
+Texture_Filter_Mode :: enum i32 {
+	Bilinear,
+	Nearest,
+}
+texture_filter_titles: cstring : "Bilinear\x00Nearest\x00"
+texture_filter_mapping := [Texture_Filter_Mode]i32 {
+	.Bilinear = gl.LINEAR,
+	.Nearest  = gl.NEAREST,
+}
+
 State :: struct {
 	use_wireframe:        bool,
 	program_should_close: bool,
 	container_wrap:       struct {
 		s, t: i32,
 	},
+	texture_filter:       i32,
+	texture_mix:          f32,
 	ui:                   struct {
 		selected_wrap_s, selected_wrap_t: Texture_Wrap_Mode,
+		selected_filter:                  Texture_Filter_Mode,
 	},
 }
 g_state: State = {
 	container_wrap = {s = gl.CLAMP_TO_EDGE, t = gl.CLAMP_TO_EDGE},
-	ui = {.Clamp_to_Edge, .Clamp_to_Edge},
+	texture_filter = gl.NEAREST,
+	texture_mix = 0.2,
+	ui = {.Clamp_to_Edge, .Clamp_to_Edge, .Nearest},
 }
 
 // odinfmt: disable
 g_vertices := [?]f32 {
      // positions      // colors        // texture coords
-     0.5,  0.5, 0.0,   1.0, 0.0, 0.0,   2.0, 2.0,   // top right
-     0.5, -0.5, 0.0,   0.0, 1.0, 0.0,   2.0, 0.0,   // bottom right
+     0.5,  0.5, 0.0,   1.0, 0.0, 0.0,   1.0, 1.0,   // top right
+     0.5, -0.5, 0.0,   0.0, 1.0, 0.0,   1.0, 0.0,   // bottom right
     -0.5, -0.5, 0.0,   0.0, 0.0, 1.0,   0.0, 0.0,   // bottom left
-    -0.5,  0.5, 0.0,   1.0, 1.0, 0.0,   0.0, 2.0,    // top left
+    -0.5,  0.5, 0.0,   1.0, 1.0, 0.0,   0.0, 1.0,    // top left
 }
 
 g_indices := [?]i32 {
@@ -85,7 +100,7 @@ main :: proc() {
 	defer devui.destroy()
 
 	shader_program :=
-		glc.shader_load_from_files("textures") or_else glc.crash("Error loading shaders")
+		glc.shader_load_from_files("main", "texture_mix_uniform") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(shader_program)
 
 	vbo, vao, ebo: u32
@@ -119,7 +134,7 @@ main :: proc() {
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, g_state.container_wrap.s)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, g_state.container_wrap.t)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, g_state.texture_filter)
 
 	width, height, channels: i32
 	data := stbi.load("content/textures/container.jpg", &width, &height, &channels, 0)
@@ -137,7 +152,7 @@ main :: proc() {
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, g_state.texture_filter)
 
 	stbi.set_flip_vertically_on_load(1)
 	data = stbi.load("content/textures/awesomeface.png", &width, &height, &channels, 0)
@@ -166,10 +181,14 @@ main :: proc() {
 		gl.BindTexture(gl.TEXTURE_2D, texture1)
 		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, g_state.container_wrap.s)
 		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, g_state.container_wrap.t)
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, g_state.texture_filter)
 		gl.ActiveTexture(gl.TEXTURE1)
 		gl.BindTexture(gl.TEXTURE_2D, texture2)
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, g_state.texture_filter)
 
 		glc.shader_use_program(shader_program)
+		glc.shader_uniform_set(shader_program, "textureMix", g_state.texture_mix)
+
 		gl.BindVertexArray(vao)
 		gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, nil)
 
@@ -195,6 +214,10 @@ ui_render :: proc() {
 	) {
 		g_state.container_wrap.t = texture_wrap_mode_mapping[g_state.ui.selected_wrap_t]
 	}
+	if im.Combo("Texture Filter", cast(^i32)&g_state.ui.selected_filter, texture_filter_titles) {
+		g_state.texture_filter = texture_filter_mapping[g_state.ui.selected_filter]
+	}
+	im.SliderFloat("Texture Mix", &g_state.texture_mix, 0.0, 1.0)
 }
 
 ui_render_shortcuts :: proc() {

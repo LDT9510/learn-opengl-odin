@@ -1,35 +1,57 @@
-// Draw a second container and trasnform it diferently
+// Experiment with texture wrapping methods, displaying 4 smiley faces on a single container clamped at edge
 
 package learn_opengl
 
 import "core:log"
-import "core:math"
-import glm "core:math/linalg/glsl"
 import "core:mem"
 import "core:sys/windows"
 import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 import stbi "vendor:stb/image"
 
+import im "extern:imgui"
 import "lib:devui"
 import glc "lib:glcore"
 
 // avoids unused import error when ODIN_DEBUG is 0
 _ :: mem
 
+Texture_Wrap_Mode :: enum i32 {
+	Repeat,
+	Mirrored_Repeat,
+	Clamp_to_Edge,
+	Clamp_to_Border,
+}
+texture_wrap_mode_titles: cstring : "Repeat\x00Mirrored Repeat\x00Clamp to Edge\x00Clamp to Border\x00"
+texture_wrap_mode_mapping := [Texture_Wrap_Mode]i32 {
+	.Repeat          = gl.REPEAT,
+	.Mirrored_Repeat = gl.MIRRORED_REPEAT,
+	.Clamp_to_Edge   = gl.CLAMP_TO_EDGE,
+	.Clamp_to_Border = gl.CLAMP_TO_BORDER,
+}
+
 State :: struct {
 	use_wireframe:        bool,
 	program_should_close: bool,
+	container_wrap:       struct {
+		s, t: i32,
+	},
+	ui:                   struct {
+		selected_wrap_s, selected_wrap_t: Texture_Wrap_Mode,
+	},
 }
-g_state: State
+g_state: State = {
+	container_wrap = {s = gl.CLAMP_TO_EDGE, t = gl.CLAMP_TO_EDGE},
+	ui = {.Clamp_to_Edge, .Clamp_to_Edge},
+}
 
 // odinfmt: disable
 g_vertices := [?]f32 {
      // positions      // colors        // texture coords
-     0.5,  0.5, 0.0,   1.0, 0.0, 0.0,   1.0, 1.0,   // top right
-     0.5, -0.5, 0.0,   0.0, 1.0, 0.0,   1.0, 0.0,   // bottom right
+     0.5,  0.5, 0.0,   1.0, 0.0, 0.0,   2.0, 2.0,   // top right
+     0.5, -0.5, 0.0,   0.0, 1.0, 0.0,   2.0, 0.0,   // bottom right
     -0.5, -0.5, 0.0,   0.0, 0.0, 1.0,   0.0, 0.0,   // bottom left
-    -0.5,  0.5, 0.0,   1.0, 1.0, 0.0,   0.0, 1.0,    // top left
+    -0.5,  0.5, 0.0,   1.0, 1.0, 0.0,   0.0, 2.0,    // top left
 }
 
 g_indices := [?]i32 {
@@ -63,7 +85,7 @@ main :: proc() {
 	defer devui.destroy()
 
 	shader_program :=
-		glc.shader_load_from_files("transforms") or_else glc.crash("Error loading shaders")
+		glc.shader_load_from_files("main") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(shader_program)
 
 	vbo, vao, ebo: u32
@@ -94,8 +116,8 @@ main :: proc() {
 	gl.GenTextures(1, &texture1)
 	defer gl.DeleteTextures(1, &texture1)
 	gl.BindTexture(gl.TEXTURE_2D, texture1)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, g_state.container_wrap.s)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, g_state.container_wrap.t)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 
@@ -131,6 +153,7 @@ main :: proc() {
 	glc.shader_uniform_set(shader_program, "texture1", 0)
 	glc.shader_uniform_set(shader_program, "texture2", 1)
 
+
 	for !g_state.program_should_close {
 		handle_events()
 
@@ -141,22 +164,13 @@ main :: proc() {
 
 		gl.ActiveTexture(gl.TEXTURE0)
 		gl.BindTexture(gl.TEXTURE_2D, texture1)
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, g_state.container_wrap.s)
+		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, g_state.container_wrap.t)
 		gl.ActiveTexture(gl.TEXTURE1)
 		gl.BindTexture(gl.TEXTURE_2D, texture2)
 
 		glc.shader_use_program(shader_program)
-
 		gl.BindVertexArray(vao)
-
-		trans := glm.mat4Translate({0.5, -0.5, 0.0})
-		trans *= glm.mat4Rotate({0, 0, 1}, cast(f32)glc.timing_get_elapsed_seconds())
-		glc.shader_uniform_set(shader_program, "transform", &trans)
-		gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, nil)
-
-		scale_value := math.sin(cast(f32)glc.timing_get_elapsed_seconds())
-		trans = glm.mat4Translate({-0.5, 0.5, 0.0})
-		trans *= glm.mat4Scale({scale_value, scale_value, scale_value})
-		glc.shader_uniform_set(shader_program, "transform", &trans)
 		gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, nil)
 
 		devui.render_ui("Learning OpenGL", ui_render, ui_render_shortcuts)
@@ -165,7 +179,22 @@ main :: proc() {
 	}
 }
 
+
 ui_render :: proc() {
+	if im.Combo(
+		"Container wrap S",
+		cast(^i32)&g_state.ui.selected_wrap_s,
+		texture_wrap_mode_titles,
+	) {
+		g_state.container_wrap.s = texture_wrap_mode_mapping[g_state.ui.selected_wrap_s]
+	}
+	if im.Combo(
+		"Container wrap T",
+		cast(^i32)&g_state.ui.selected_wrap_t,
+		texture_wrap_mode_titles,
+	) {
+		g_state.container_wrap.t = texture_wrap_mode_mapping[g_state.ui.selected_wrap_t]
+	}
 }
 
 ui_render_shortcuts :: proc() {

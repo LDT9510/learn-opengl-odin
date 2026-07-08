@@ -3,7 +3,6 @@ package glcore
 import "core:c"
 import "core:log"
 import glm "core:math/linalg/glsl"
-import "core:strings"
 import gl "vendor:OpenGL"
 
 Shader_Type :: enum u32 {
@@ -14,8 +13,14 @@ Shader_Type :: enum u32 {
 Shader_Handle :: distinct u32
 Shader_Program_Handle :: distinct u32
 
-shader_create :: proc(type: Shader_Type, code: cstring) -> (shader_id: Shader_Handle, ok: bool) {
-	code := code
+shader_create :: proc(
+	code: Shader_Code,
+	type: Shader_Type,
+) -> (
+	shader_id: Shader_Handle,
+	ok: bool,
+) {
+	code := cast(cstring)code
 
 	success: i32
 	native_shader_id := gl.CreateShader(cast(u32)type)
@@ -39,15 +44,15 @@ shader_create :: proc(type: Shader_Type, code: cstring) -> (shader_id: Shader_Ha
 	return shader_id, true
 }
 
-shader_load_from_glsl_code :: proc(
-	vertex_code: cstring,
-	fragment_code: cstring,
+shader_load_from_code :: proc(
+	vertex_code: Shader_Code,
+	fragment_code: Shader_Code,
 ) -> (
 	program_id: Shader_Program_Handle,
 	ok: bool,
 ) {
-	vertex_id := cast(u32)shader_create(.Vertex, vertex_code) or_return
-	fragment_id := cast(u32)shader_create(.Fragment, fragment_code) or_return
+	vertex_id := cast(u32)shader_create(vertex_code, .Vertex) or_return
+	fragment_id := cast(u32)shader_create(fragment_code, .Fragment) or_return
 	defer {
 		gl.DeleteShader(vertex_id)
 		gl.DeleteShader(fragment_id)
@@ -92,21 +97,18 @@ shader_load_diff_name_files :: proc(
 	ok: bool,
 ) {
 	// NOTE: to avoid unnecessary allocations, read the file as a cstring directly
-	vertex_content := content_shader_read(vertex_file_name, .Vertex) or_return
-	fragment_content := content_shader_read(fragment_file_name, .Fragment) or_return
+	vertex_code := content_read_shader_code(vertex_file_name, .Vertex, context.allocator) or_return
+	fragment_code := content_read_shader_code(
+		fragment_file_name,
+		.Fragment,
+		context.allocator,
+	) or_return
 	defer {
-		content_delete(vertex_content)
-		content_delete(fragment_content)
+		content_delete_shader_code(vertex_code)
+		content_delete_shader_code(fragment_code)
 	}
 
-	vertex_code := strings.clone_to_cstring(cast(string)vertex_content)
-	fragment_code := strings.clone_to_cstring(cast(string)fragment_content)
-	defer {
-		delete(vertex_code)
-		delete(fragment_code)
-	}
-
-	return shader_load_from_glsl_code(vertex_code, fragment_code)
+	return shader_load_from_code(vertex_code, fragment_code)
 }
 
 shader_use_program :: proc(program_id: Shader_Program_Handle) {

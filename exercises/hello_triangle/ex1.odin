@@ -1,4 +1,4 @@
-// Draw 2 triangles with different shaders, one of them orange and the other yellow
+// Draw 2 triangles next two each other using more vertices
 
 package learn_opengl
 
@@ -11,7 +11,7 @@ import sdl "vendor:sdl3"
 
 import glc "lib:glcore"
 
-_ :: glc.OPENGL_EXERCISES_MODE // do not raise unused error
+_ :: glc.OPENGL_EXERCISES_PATH  // do not raise unused error
 
 // odinfmt: disable
 WINDOW_WIDTH :: 800
@@ -26,7 +26,7 @@ void main()
     gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
 }`
 
-fragment_shader_source1: cstring = `
+fragment_shader_source: cstring = `
 #version 330 core
 out vec4 FragColor;
 
@@ -35,23 +35,11 @@ void main()
     FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
 } `
 
-fragment_shader_source2: cstring = `
-#version 330 core
-out vec4 FragColor;
-
-void main()
-{
-    FragColor = vec4(1.0f, 1.0f, 0.0f, 1.0f);
-} `
-
-vertices1 := [?]f32 {
+vertices := [?]f32 {
     // first triangle
     -0.9, -0.5, 0.0,  // left 
     -0.0, -0.5, 0.0,  // right
     -0.45, 0.5, 0.0,  // top 
-}
-
-vertices2 := [?]f32 {
     // second triangle
      0.0, -0.5, 0.0,  // left
      0.9, -0.5, 0.0,  // right
@@ -130,73 +118,39 @@ main :: proc() {
 		log.errorf("Vertex compilation error: \n\t\t\t%s", cast(cstring)&info_log[0])
 	}
 
-	fragment_shader1 := gl.CreateShader(gl.FRAGMENT_SHADER)
-	gl.ShaderSource(fragment_shader1, 1, &fragment_shader_source1, nil)
-	gl.CompileShader(fragment_shader1)
-	gl.GetShaderiv(fragment_shader1, gl.COMPILE_STATUS, &success)
+	fragment_shader := gl.CreateShader(gl.FRAGMENT_SHADER)
+	gl.ShaderSource(fragment_shader, 1, &fragment_shader_source, nil)
+	gl.CompileShader(fragment_shader)
+	gl.GetShaderiv(fragment_shader, gl.COMPILE_STATUS, &success)
 	if success != 1 {
-		gl.GetShaderInfoLog(fragment_shader1, size_of(info_log), nil, &info_log[0])
+		gl.GetShaderInfoLog(fragment_shader, size_of(info_log), nil, &info_log[0])
 		log.errorf("Fragment compilation error: \n\t\t\t%s", cast(cstring)&info_log[0])
 	}
 
-	fragment_shader2 := gl.CreateShader(gl.FRAGMENT_SHADER)
-	gl.ShaderSource(fragment_shader2, 1, &fragment_shader_source2, nil)
-	gl.CompileShader(fragment_shader2)
-	gl.GetShaderiv(fragment_shader2, gl.COMPILE_STATUS, &success)
+	shader_program := gl.CreateProgram()
+	gl.AttachShader(shader_program, vertex_shader)
+	gl.AttachShader(shader_program, fragment_shader)
+	gl.LinkProgram(shader_program)
+	gl.GetProgramiv(shader_program, gl.LINK_STATUS, &success)
 	if success != 1 {
-		gl.GetShaderInfoLog(fragment_shader2, size_of(info_log), nil, &info_log[0])
-		log.errorf("Fragment compilation error: \n\t\t\t%s", cast(cstring)&info_log[0])
-	}
-
-	shader_program1 := gl.CreateProgram()
-	gl.AttachShader(shader_program1, vertex_shader)
-	gl.AttachShader(shader_program1, fragment_shader1)
-	gl.LinkProgram(shader_program1)
-	gl.GetProgramiv(shader_program1, gl.LINK_STATUS, &success)
-	if success != 1 {
-		gl.GetProgramInfoLog(shader_program1, size_of(info_log), nil, &info_log[0])
+		gl.GetProgramInfoLog(shader_program, size_of(info_log), nil, &info_log[0])
 		log.errorf("Shader program link error: \n\t\t\t%s", cast(cstring)&info_log[0])
 	}
-
-	shader_program2 := gl.CreateProgram()
-	gl.AttachShader(shader_program2, vertex_shader)
-	gl.AttachShader(shader_program2, fragment_shader2)
-	gl.LinkProgram(shader_program2)
-	gl.GetProgramiv(shader_program2, gl.LINK_STATUS, &success)
-	if success != 1 {
-		gl.GetProgramInfoLog(shader_program2, size_of(info_log), nil, &info_log[0])
-		log.errorf("Shader program link error: \n\t\t\t%s", cast(cstring)&info_log[0])
-	}
-
-	defer gl.DeleteProgram(shader_program1)
-	defer gl.DeleteProgram(shader_program2)
+	defer gl.DeleteProgram(shader_program)
 	gl.DeleteShader(vertex_shader)
-	gl.DeleteShader(fragment_shader1)
-	gl.DeleteShader(fragment_shader2)
+	gl.DeleteShader(fragment_shader)
 
 	gl.Viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
 
-	vbo1, vao1, vbo2, vao2: u32
+	vbo, vao: u32
 
-	gl.GenVertexArrays(1, &vao1)
-	gl.BindVertexArray(vao1)
+	gl.GenVertexArrays(1, &vao)
+	gl.BindVertexArray(vao)
 
-	gl.GenBuffers(1, &vbo1)
-	defer gl.DeleteBuffers(1, &vbo1)
-	gl.BindBuffer(gl.ARRAY_BUFFER, vbo1)
-	gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices1), &vertices1, gl.STATIC_DRAW)
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 3 * size_of(f32), 0)
-	gl.EnableVertexAttribArray(0)
-
-	gl.BindVertexArray(0)
-
-	gl.GenVertexArrays(1, &vao2)
-	gl.BindVertexArray(vao2)
-
-	gl.GenBuffers(1, &vbo2)
-	defer gl.DeleteBuffers(1, &vbo2)
-	gl.BindBuffer(gl.ARRAY_BUFFER, vbo2)
-	gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices2), &vertices2, gl.STATIC_DRAW)
+	gl.GenBuffers(1, &vbo)
+	defer gl.DeleteBuffers(1, &vbo)
+	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
+	gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices), &vertices, gl.STATIC_DRAW)
 	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 3 * size_of(f32), 0)
 	gl.EnableVertexAttribArray(0)
 
@@ -209,12 +163,9 @@ main :: proc() {
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 
-		gl.UseProgram(shader_program1)
-		gl.BindVertexArray(vao1)
-		gl.DrawArrays(gl.TRIANGLES, 0, 3)
-		gl.UseProgram(shader_program2)
-		gl.BindVertexArray(vao2)
-		gl.DrawArrays(gl.TRIANGLES, 0, 3)
+		gl.BindVertexArray(vao)
+		gl.UseProgram(shader_program)
+		gl.DrawArrays(gl.TRIANGLES, 0, 6)
 
 		sdl.GL_SwapWindow(window)
 	}

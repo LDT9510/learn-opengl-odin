@@ -1,8 +1,9 @@
-// Experimenting with field of view and aspect ratio parameters for projection
+// Draw a second container and trasnform it diferently
 
 package learn_opengl
 
 import "core:log"
+import "core:math"
 import glm "core:math/linalg/glsl"
 import "core:mem"
 import "core:sys/windows"
@@ -10,7 +11,6 @@ import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 import stbi "vendor:stb/image"
 
-import im "extern:imgui"
 import "lib:devui"
 import glc "lib:glcore"
 
@@ -20,71 +20,22 @@ _ :: mem
 State :: struct {
 	use_wireframe:        bool,
 	program_should_close: bool,
-	ui:                   struct {
-		fov:          f32,
-		aspect_ratio: f32,
-	},
 }
 g_state: State
 
 // odinfmt: disable
-g_cube_vertices := [?]f32 {
-    -0.5, -0.5, -0.5,  0.0, 0.0,
-     0.5, -0.5, -0.5,  1.0, 0.0,
-     0.5,  0.5, -0.5,  1.0, 1.0,
-     0.5,  0.5, -0.5,  1.0, 1.0,
-    -0.5,  0.5, -0.5,  0.0, 1.0,
-    -0.5, -0.5, -0.5,  0.0, 0.0,
-
-    -0.5, -0.5,  0.5,  0.0, 0.0,
-     0.5, -0.5,  0.5,  1.0, 0.0,
-     0.5,  0.5,  0.5,  1.0, 1.0,
-     0.5,  0.5,  0.5,  1.0, 1.0,
-    -0.5,  0.5,  0.5,  0.0, 1.0,
-    -0.5, -0.5,  0.5,  0.0, 0.0,
-
-    -0.5,  0.5,  0.5,  1.0, 0.0,
-    -0.5,  0.5, -0.5,  1.0, 1.0,
-    -0.5, -0.5, -0.5,  0.0, 1.0,
-    -0.5, -0.5, -0.5,  0.0, 1.0,
-    -0.5, -0.5,  0.5,  0.0, 0.0,
-    -0.5,  0.5,  0.5,  1.0, 0.0,
-
-     0.5,  0.5,  0.5,  1.0, 0.0,
-     0.5,  0.5, -0.5,  1.0, 1.0,
-     0.5, -0.5, -0.5,  0.0, 1.0,
-     0.5, -0.5, -0.5,  0.0, 1.0,
-     0.5, -0.5,  0.5,  0.0, 0.0,
-     0.5,  0.5,  0.5,  1.0, 0.0,
-
-    -0.5, -0.5, -0.5,  0.0, 1.0,
-     0.5, -0.5, -0.5,  1.0, 1.0,
-     0.5, -0.5,  0.5,  1.0, 0.0,
-     0.5, -0.5,  0.5,  1.0, 0.0,
-    -0.5, -0.5,  0.5,  0.0, 0.0,
-    -0.5, -0.5, -0.5,  0.0, 1.0,
-
-    -0.5,  0.5, -0.5,  0.0, 1.0,
-     0.5,  0.5, -0.5,  1.0, 1.0,
-     0.5,  0.5,  0.5,  1.0, 0.0,
-     0.5,  0.5,  0.5,  1.0, 0.0,
-    -0.5,  0.5,  0.5,  0.0, 0.0,
-    -0.5,  0.5, -0.5,  0.0, 1.0,
+g_vertices := [?]f32 {
+     // positions      // colors        // texture coords
+     0.5,  0.5, 0.0,   1.0, 0.0, 0.0,   1.0, 1.0,   // top right
+     0.5, -0.5, 0.0,   0.0, 1.0, 0.0,   1.0, 0.0,   // bottom right
+    -0.5, -0.5, 0.0,   0.0, 0.0, 1.0,   0.0, 0.0,   // bottom left
+    -0.5,  0.5, 0.0,   1.0, 1.0, 0.0,   0.0, 1.0,    // top left
 }
 
-g_cube_positions := [?]glm.vec3 {
-	{ 0.0,  0.0,  0.0},
-	{ 2.0,  5.0, -15.0},
-    {-1.5, -2.2, -2.5},
-    {-3.8, -2.0, -12.3},
-    { 2.4, -0.4, -3.5},
-    {-1.7,  3.0, -7.5},
-    { 1.3, -2.0, -2.5},
-    { 1.5,  2.0, -2.5},
-    { 1.5,  0.2, -1.5},
-    {-1.3,  1.0, -1.5},
+g_indices := [?]i32 {
+	0, 1, 3,
+	1, 2, 3,
 }
-
 // odinfmt: enable
 
 main :: proc() {
@@ -111,15 +62,11 @@ main :: proc() {
 	devui.init_for_sdl_window(window, gl_ctx)
 	defer devui.destroy()
 
-	g_state = {
-		ui = {fov = 45.0, aspect_ratio = glc.window_get_aspect_ratio(window)},
-	}
-
 	shader_program :=
-		glc.shader_load_from_files("coordinate_systems") or_else glc.crash("Error loading shaders")
+		glc.shader_load_from_files("main") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(shader_program)
 
-	vbo, vao: u32
+	vbo, vao, ebo: u32
 
 	gl.GenVertexArrays(1, &vao)
 	defer gl.DeleteVertexArrays(1, &vao)
@@ -128,11 +75,18 @@ main :: proc() {
 	gl.GenBuffers(1, &vbo)
 	defer gl.DeleteBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	gl.BufferData(gl.ARRAY_BUFFER, size_of(g_cube_vertices), &g_cube_vertices, gl.STATIC_DRAW)
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 0) // position
+	gl.BufferData(gl.ARRAY_BUFFER, size_of(g_vertices), &g_vertices, gl.STATIC_DRAW)
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 0) // position
 	gl.EnableVertexAttribArray(0)
-	gl.VertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 3 * size_of(f32)) // texture coords
+	gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 3 * size_of(f32)) // color
 	gl.EnableVertexAttribArray(1)
+	gl.VertexAttribPointer(2, 2, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 6 * size_of(f32)) // texture coords
+	gl.EnableVertexAttribArray(2)
+
+	gl.GenBuffers(1, &ebo)
+	defer gl.DeleteBuffers(1, &ebo)
+	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
+	gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(g_indices), &g_indices, gl.STATIC_DRAW)
 
 	gl.BindVertexArray(0)
 
@@ -177,42 +131,33 @@ main :: proc() {
 	glc.shader_uniform_set(shader_program, "texture1", 0)
 	glc.shader_uniform_set(shader_program, "texture2", 1)
 
-	view := glm.mat4Translate({0, 0, -3})
-
-	gl.Enable(gl.DEPTH_TEST)
-
 	for !g_state.program_should_close {
 		handle_events()
 
 		gl.PolygonMode(gl.FRONT_AND_BACK, g_state.use_wireframe ? gl.LINE : gl.FILL)
 
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
-		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+		gl.Clear(gl.COLOR_BUFFER_BIT)
 
 		gl.ActiveTexture(gl.TEXTURE0)
 		gl.BindTexture(gl.TEXTURE_2D, texture1)
 		gl.ActiveTexture(gl.TEXTURE1)
 		gl.BindTexture(gl.TEXTURE_2D, texture2)
 
-		proj := glm.mat4Perspective(
-			glm.radians_f32(g_state.ui.fov),
-			g_state.ui.aspect_ratio,
-			0.1,
-			100.0,
-		)
-
 		glc.shader_use_program(shader_program)
-		glc.shader_uniform_set(shader_program, "view", &view)
-		glc.shader_uniform_set(shader_program, "projection", &proj)
 
 		gl.BindVertexArray(vao)
-		for p, i in g_cube_positions {
-			model := glm.mat4Translate(p)
-			angle := 20.0 * cast(f32)i
-			model *= glm.mat4Rotate({1, 0.3, 0.5}, glm.radians_f32(angle))
-			glc.shader_uniform_set(shader_program, "model", &model)
-			gl.DrawArrays(gl.TRIANGLES, 0, 36)
-		}
+
+		trans := glm.mat4Translate({0.5, -0.5, 0.0})
+		trans *= glm.mat4Rotate({0, 0, 1}, cast(f32)glc.timing_get_elapsed_seconds())
+		glc.shader_uniform_set(shader_program, "transform", &trans)
+		gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, nil)
+
+		scale_value := math.sin(cast(f32)glc.timing_get_elapsed_seconds())
+		trans = glm.mat4Translate({-0.5, 0.5, 0.0})
+		trans *= glm.mat4Scale({scale_value, scale_value, scale_value})
+		glc.shader_uniform_set(shader_program, "transform", &trans)
+		gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, nil)
 
 		devui.render_ui("Learning OpenGL", ui_render, ui_render_shortcuts)
 
@@ -221,8 +166,6 @@ main :: proc() {
 }
 
 ui_render :: proc() {
-	im.SliderFloat("FoV", &g_state.ui.fov, 0.0, 180.0)
-	im.SliderFloat("Aspect Ratio", &g_state.ui.aspect_ratio, 0.0, 2.0)
 }
 
 ui_render_shortcuts :: proc() {

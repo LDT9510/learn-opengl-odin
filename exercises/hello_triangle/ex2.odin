@@ -1,4 +1,4 @@
-// Draw 2 triangles next two each other using more vertices
+// Draw 2 triangles next two each other using different VAOs and VBOs
 
 package learn_opengl
 
@@ -11,7 +11,7 @@ import sdl "vendor:sdl3"
 
 import glc "lib:glcore"
 
-_ :: glc.OPENGL_EXERCISES_MODE  // do not raise unused error
+_ :: glc.OPENGL_EXERCISES_PATH  // do not raise unused error
 
 // odinfmt: disable
 WINDOW_WIDTH :: 800
@@ -35,11 +35,14 @@ void main()
     FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
 } `
 
-vertices := [?]f32 {
+vertices1 := [?]f32 {
     // first triangle
     -0.9, -0.5, 0.0,  // left 
     -0.0, -0.5, 0.0,  // right
     -0.45, 0.5, 0.0,  // top 
+}
+
+vertices2 := [?]f32 {
     // second triangle
      0.0, -0.5, 0.0,  // left
      0.9, -0.5, 0.0,  // right
@@ -142,15 +145,27 @@ main :: proc() {
 
 	gl.Viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
 
-	vbo, vao: u32
+	vbo1, vao1, vbo2, vao2: u32
 
-	gl.GenVertexArrays(1, &vao)
-	gl.BindVertexArray(vao)
+	gl.GenVertexArrays(1, &vao1)
+	gl.BindVertexArray(vao1)
 
-	gl.GenBuffers(1, &vbo)
-	defer gl.DeleteBuffers(1, &vbo)
-	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices), &vertices, gl.STATIC_DRAW)
+	gl.GenBuffers(1, &vbo1)
+	defer gl.DeleteBuffers(1, &vbo1)
+	gl.BindBuffer(gl.ARRAY_BUFFER, vbo1)
+	gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices1), &vertices1, gl.STATIC_DRAW)
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 3 * size_of(f32), 0)
+	gl.EnableVertexAttribArray(0)
+
+	gl.BindVertexArray(0)
+
+	gl.GenVertexArrays(1, &vao2)
+	gl.BindVertexArray(vao2)
+
+	gl.GenBuffers(1, &vbo2)
+	defer gl.DeleteBuffers(1, &vbo2)
+	gl.BindBuffer(gl.ARRAY_BUFFER, vbo2)
+	gl.BufferData(gl.ARRAY_BUFFER, size_of(vertices2), &vertices2, gl.STATIC_DRAW)
 	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 3 * size_of(f32), 0)
 	gl.EnableVertexAttribArray(0)
 
@@ -163,9 +178,11 @@ main :: proc() {
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 
-		gl.BindVertexArray(vao)
 		gl.UseProgram(shader_program)
-		gl.DrawArrays(gl.TRIANGLES, 0, 6)
+		gl.BindVertexArray(vao1)
+		gl.DrawArrays(gl.TRIANGLES, 0, 3)
+		gl.BindVertexArray(vao2)
+		gl.DrawArrays(gl.TRIANGLES, 0, 3)
 
 		sdl.GL_SwapWindow(window)
 	}

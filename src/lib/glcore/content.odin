@@ -1,38 +1,57 @@
 package glcore
 
+import "base:runtime"
 import "core:log"
 import "core:os"
 import "core:strings"
 
-OPENGL_EXERCISES_MODE :: #config(OPENGL_EXERCISES_MODE, false)
+OPENGL_EXERCISES_PATH :: #config(OPENGL_EXERCISES_PATH, "")
 
-CONTENT_BASE_PATH :: "content/" when !OPENGL_EXERCISES_MODE else "exercises/_content/"
-CONTENT_SHADER_PATH :: CONTENT_BASE_PATH + "shaders/"
+CONTENT_BASE_PATH :: "content/" when OPENGL_EXERCISES_PATH == "" else OPENGL_EXERCISES_PATH
+CONTENT_SHADER_PATH ::
+	CONTENT_BASE_PATH + "shaders/" when OPENGL_EXERCISES_PATH == "" else OPENGL_EXERCISES_PATH
+
 VERTEX_SHADER_EXT :: ".vert"
 FRAGMENT_SHADER_EXT :: ".frag"
 
-File_Content :: distinct string
+Shader_Code :: distinct cstring
 
-content_shader_read :: proc(shader_name: string, shader_type: Shader_Type) -> (content: File_Content, ok: bool) {
+content_read_shader_code :: proc(
+	shader_name: string,
+	shader_type: Shader_Type,
+	allocator: runtime.Allocator,
+) -> (
+	content: Shader_Code,
+	ok: bool,
+) {
 	extension := VERTEX_SHADER_EXT if shader_type == .Vertex else FRAGMENT_SHADER_EXT
-	shader_file_path := strings.concatenate({CONTENT_SHADER_PATH, shader_name, extension})
+	shader_file_path := strings.concatenate({CONTENT_SHADER_PATH, shader_name, extension}, allocator)
 	defer delete(shader_file_path)
 
-	file_content := content_read_bytes(shader_file_path) or_return
+	file_content := cast(string)_content_read_bytes(shader_file_path, allocator) or_return
+	defer delete(file_content)
 
-	return cast(File_Content)file_content, true
+	shader_code := cast(Shader_Code)strings.clone_to_cstring(file_content, allocator)
+
+	return shader_code, true
 }
 
-content_delete :: proc(content: File_Content) {
+content_delete_shader_code :: proc(content: Shader_Code) {
 	delete(cast(string)content)
 }
 
-content_read_bytes :: proc(path: string) -> (data: []byte, ok: bool) {
-	content, error := os.read_entire_file(path, context.allocator)
+_content_read_bytes :: proc(
+	path: string,
+	allocator: runtime.Allocator,
+) -> (
+	data: []byte,
+	ok: bool,
+) {
+	content, error := os.read_entire_file(path, allocator)
 
 	if error != nil {
 		log.errorf("Failed to load content '%s': %v", path, error)
-		return 
+		return
 	}
 
 	return content, true

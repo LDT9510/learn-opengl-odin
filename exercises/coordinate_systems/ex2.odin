@@ -1,8 +1,9 @@
-// Display only the center pixels of the container and set filtering to Nearest
+// Translate the view matrix
 
 package learn_opengl
 
 import "core:log"
+import glm "core:math/linalg/glsl"
 import "core:mem"
 import "core:sys/windows"
 import gl "vendor:OpenGL"
@@ -16,61 +17,75 @@ import glc "lib:glcore"
 // avoids unused import error when ODIN_DEBUG is 0
 _ :: mem
 
-Texture_Wrap_Mode :: enum i32 {
-	Repeat,
-	Mirrored_Repeat,
-	Clamp_to_Edge,
-	Clamp_to_Border,
-}
-texture_wrap_mode_titles: cstring : "Repeat\x00Mirrored Repeat\x00Clamp to Edge\x00Clamp to Border\x00"
-texture_wrap_mode_mapping := [Texture_Wrap_Mode]i32 {
-	.Repeat          = gl.REPEAT,
-	.Mirrored_Repeat = gl.MIRRORED_REPEAT,
-	.Clamp_to_Edge   = gl.CLAMP_TO_EDGE,
-	.Clamp_to_Border = gl.CLAMP_TO_BORDER,
-}
-
-Texture_Filter_Mode :: enum i32 {
-	Bilinear,
-	Nearest,
-}
-texture_filter_titles: cstring : "Bilinear\x00Nearest\x00"
-texture_filter_mapping := [Texture_Filter_Mode]i32 {
-	.Bilinear = gl.LINEAR,
-	.Nearest  = gl.NEAREST,
-}
-
 State :: struct {
 	use_wireframe:        bool,
 	program_should_close: bool,
-	container_wrap:       struct {
-		s, t: i32,
-	},
-	texture_filter:       i32,
 	ui:                   struct {
-		selected_wrap_s, selected_wrap_t: Texture_Wrap_Mode,
-		selected_filter:                  Texture_Filter_Mode,
+		fov:          f32,
+		aspect_ratio: f32,
 	},
+	view_translation:     glm.vec3,
 }
-g_state: State = {
-	container_wrap = {s = gl.CLAMP_TO_EDGE, t = gl.CLAMP_TO_EDGE},
-	texture_filter = gl.NEAREST,
-	ui = {.Clamp_to_Edge, .Clamp_to_Edge, .Nearest},
-}
+g_state: State
 
 // odinfmt: disable
-g_vertices := [?]f32 {
-     // positions      // colors        // texture coords
-     0.5,  0.5, 0.0,   1.0, 0.0, 0.0,   0.55, 0.55,   // top right
-     0.5, -0.5, 0.0,   0.0, 1.0, 0.0,   0.55, 0.45,   // bottom right
-    -0.5, -0.5, 0.0,   0.0, 0.0, 1.0,   0.45, 0.45,   // bottom left
-    -0.5,  0.5, 0.0,   1.0, 1.0, 0.0,   0.45, 0.55,   // top left
+g_cube_vertices := [?]f32 {
+    -0.5, -0.5, -0.5,  0.0, 0.0,
+     0.5, -0.5, -0.5,  1.0, 0.0,
+     0.5,  0.5, -0.5,  1.0, 1.0,
+     0.5,  0.5, -0.5,  1.0, 1.0,
+    -0.5,  0.5, -0.5,  0.0, 1.0,
+    -0.5, -0.5, -0.5,  0.0, 0.0,
+
+    -0.5, -0.5,  0.5,  0.0, 0.0,
+     0.5, -0.5,  0.5,  1.0, 0.0,
+     0.5,  0.5,  0.5,  1.0, 1.0,
+     0.5,  0.5,  0.5,  1.0, 1.0,
+    -0.5,  0.5,  0.5,  0.0, 1.0,
+    -0.5, -0.5,  0.5,  0.0, 0.0,
+
+    -0.5,  0.5,  0.5,  1.0, 0.0,
+    -0.5,  0.5, -0.5,  1.0, 1.0,
+    -0.5, -0.5, -0.5,  0.0, 1.0,
+    -0.5, -0.5, -0.5,  0.0, 1.0,
+    -0.5, -0.5,  0.5,  0.0, 0.0,
+    -0.5,  0.5,  0.5,  1.0, 0.0,
+
+     0.5,  0.5,  0.5,  1.0, 0.0,
+     0.5,  0.5, -0.5,  1.0, 1.0,
+     0.5, -0.5, -0.5,  0.0, 1.0,
+     0.5, -0.5, -0.5,  0.0, 1.0,
+     0.5, -0.5,  0.5,  0.0, 0.0,
+     0.5,  0.5,  0.5,  1.0, 0.0,
+
+    -0.5, -0.5, -0.5,  0.0, 1.0,
+     0.5, -0.5, -0.5,  1.0, 1.0,
+     0.5, -0.5,  0.5,  1.0, 0.0,
+     0.5, -0.5,  0.5,  1.0, 0.0,
+    -0.5, -0.5,  0.5,  0.0, 0.0,
+    -0.5, -0.5, -0.5,  0.0, 1.0,
+
+    -0.5,  0.5, -0.5,  0.0, 1.0,
+     0.5,  0.5, -0.5,  1.0, 1.0,
+     0.5,  0.5,  0.5,  1.0, 0.0,
+     0.5,  0.5,  0.5,  1.0, 0.0,
+    -0.5,  0.5,  0.5,  0.0, 0.0,
+    -0.5,  0.5, -0.5,  0.0, 1.0,
 }
 
-g_indices := [?]i32 {
-	0, 1, 3,
-	1, 2, 3,
+g_cube_positions := [?]glm.vec3 {
+	{ 0.0,  0.0,  0.0},
+	{ 2.0,  5.0, -15.0},
+    {-1.5, -2.2, -2.5},
+    {-3.8, -2.0, -12.3},
+    { 2.4, -0.4, -3.5},
+    {-1.7,  3.0, -7.5},
+    { 1.3, -2.0, -2.5},
+    { 1.5,  2.0, -2.5},
+    { 1.5,  0.2, -1.5},
+    {-1.3,  1.0, -1.5},
 }
+
 // odinfmt: enable
 
 main :: proc() {
@@ -97,11 +112,16 @@ main :: proc() {
 	devui.init_for_sdl_window(window, gl_ctx)
 	defer devui.destroy()
 
+	g_state = {
+		ui = {fov = 45.0, aspect_ratio = glc.window_get_aspect_ratio(window)},
+		view_translation = {0, 0, -3},
+	}
+
 	shader_program :=
-		glc.shader_load_from_files("textures") or_else glc.crash("Error loading shaders")
+		glc.shader_load_from_files("main") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(shader_program)
 
-	vbo, vao, ebo: u32
+	vbo, vao: u32
 
 	gl.GenVertexArrays(1, &vao)
 	defer gl.DeleteVertexArrays(1, &vao)
@@ -110,18 +130,11 @@ main :: proc() {
 	gl.GenBuffers(1, &vbo)
 	defer gl.DeleteBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	gl.BufferData(gl.ARRAY_BUFFER, size_of(g_vertices), &g_vertices, gl.STATIC_DRAW)
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 0) // position
+	gl.BufferData(gl.ARRAY_BUFFER, size_of(g_cube_vertices), &g_cube_vertices, gl.STATIC_DRAW)
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 0) // position
 	gl.EnableVertexAttribArray(0)
-	gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 3 * size_of(f32)) // color
+	gl.VertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 3 * size_of(f32)) // texture coords
 	gl.EnableVertexAttribArray(1)
-	gl.VertexAttribPointer(2, 2, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 6 * size_of(f32)) // texture coords
-	gl.EnableVertexAttribArray(2)
-
-	gl.GenBuffers(1, &ebo)
-	defer gl.DeleteBuffers(1, &ebo)
-	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
-	gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, size_of(g_indices), &g_indices, gl.STATIC_DRAW)
 
 	gl.BindVertexArray(0)
 
@@ -129,10 +142,10 @@ main :: proc() {
 	gl.GenTextures(1, &texture1)
 	defer gl.DeleteTextures(1, &texture1)
 	gl.BindTexture(gl.TEXTURE_2D, texture1)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, g_state.container_wrap.s)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, g_state.container_wrap.t)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, g_state.texture_filter)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 
 	width, height, channels: i32
 	data := stbi.load("content/textures/container.jpg", &width, &height, &channels, 0)
@@ -150,7 +163,7 @@ main :: proc() {
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, g_state.texture_filter)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 
 	stbi.set_flip_vertically_on_load(1)
 	data = stbi.load("content/textures/awesomeface.png", &width, &height, &channels, 0)
@@ -167,26 +180,41 @@ main :: proc() {
 	glc.shader_uniform_set(shader_program, "texture2", 1)
 
 
+	gl.Enable(gl.DEPTH_TEST)
+
 	for !g_state.program_should_close {
 		handle_events()
 
 		gl.PolygonMode(gl.FRONT_AND_BACK, g_state.use_wireframe ? gl.LINE : gl.FILL)
 
 		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
-		gl.Clear(gl.COLOR_BUFFER_BIT)
+		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 		gl.ActiveTexture(gl.TEXTURE0)
 		gl.BindTexture(gl.TEXTURE_2D, texture1)
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, g_state.container_wrap.s)
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, g_state.container_wrap.t)
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, g_state.texture_filter)
 		gl.ActiveTexture(gl.TEXTURE1)
 		gl.BindTexture(gl.TEXTURE_2D, texture2)
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, g_state.texture_filter)
+
+		view := glm.mat4Translate(g_state.view_translation)
+		proj := glm.mat4Perspective(
+			glm.radians_f32(g_state.ui.fov),
+			g_state.ui.aspect_ratio,
+			0.1,
+			100.0,
+		)
 
 		glc.shader_use_program(shader_program)
+		glc.shader_uniform_set(shader_program, "view", &view)
+		glc.shader_uniform_set(shader_program, "projection", &proj)
+
 		gl.BindVertexArray(vao)
-		gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, nil)
+		for p, i in g_cube_positions {
+			model := glm.mat4Translate(p)
+			angle := 20.0 * cast(f32)i
+			model *= glm.mat4Rotate({1, 0.3, 0.5}, glm.radians_f32(angle))
+			glc.shader_uniform_set(shader_program, "model", &model)
+			gl.DrawArrays(gl.TRIANGLES, 0, 36)
+		}
 
 		devui.render_ui("Learning OpenGL", ui_render, ui_render_shortcuts)
 
@@ -194,27 +222,10 @@ main :: proc() {
 	}
 }
 
-
 ui_render :: proc() {
-	if im.Combo(
-		"Container wrap S",
-		cast(^i32)&g_state.ui.selected_wrap_s,
-		texture_wrap_mode_titles,
-	) {
-		g_state.container_wrap.s = texture_wrap_mode_mapping[g_state.ui.selected_wrap_s]
-	}
-
-	if im.Combo(
-		"Container wrap T",
-		cast(^i32)&g_state.ui.selected_wrap_t,
-		texture_wrap_mode_titles,
-	) {
-		g_state.container_wrap.t = texture_wrap_mode_mapping[g_state.ui.selected_wrap_t]
-	}
-
-	if im.Combo("Texture Filter", cast(^i32)&g_state.ui.selected_filter, texture_filter_titles) {
-		g_state.texture_filter = texture_filter_mapping[g_state.ui.selected_filter]
-	}
+	im.SliderFloat("FoV", &g_state.ui.fov, 0.0, 180.0)
+	im.SliderFloat("Aspect Ratio", &g_state.ui.aspect_ratio, 0.0, 2.0)
+	im.SliderFloat3("View translate", &g_state.view_translation, -10.0, 10.0)
 }
 
 ui_render_shortcuts :: proc() {
@@ -232,7 +243,7 @@ process_key_inputs :: proc(keycode: sdl.Keycode) {
 }
 
 handle_events :: proc() {
-	e: sdl.Event
+	e: sdl.Event = ---
 	for sdl.PollEvent(&e) {
 		devui.process_event(&e)
 

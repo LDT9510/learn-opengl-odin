@@ -1,4 +1,4 @@
-// Use a uniform to control image mixing
+// Make the happy face texture look the other direction (fragment shader)
 
 package learn_opengl
 
@@ -9,56 +9,17 @@ import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 import stbi "vendor:stb/image"
 
-import im "extern:imgui"
 import "lib:devui"
 import glc "lib:glcore"
 
 // avoids unused import error when ODIN_DEBUG is 0
 _ :: mem
 
-Texture_Wrap_Mode :: enum i32 {
-	Repeat,
-	Mirrored_Repeat,
-	Clamp_to_Edge,
-	Clamp_to_Border,
-}
-texture_wrap_mode_titles: cstring : "Repeat\x00Mirrored Repeat\x00Clamp to Edge\x00Clamp to Border\x00"
-texture_wrap_mode_mapping := [Texture_Wrap_Mode]i32 {
-	.Repeat          = gl.REPEAT,
-	.Mirrored_Repeat = gl.MIRRORED_REPEAT,
-	.Clamp_to_Edge   = gl.CLAMP_TO_EDGE,
-	.Clamp_to_Border = gl.CLAMP_TO_BORDER,
-}
-
-Texture_Filter_Mode :: enum i32 {
-	Bilinear,
-	Nearest,
-}
-texture_filter_titles: cstring : "Bilinear\x00Nearest\x00"
-texture_filter_mapping := [Texture_Filter_Mode]i32 {
-	.Bilinear = gl.LINEAR,
-	.Nearest  = gl.NEAREST,
-}
-
 State :: struct {
 	use_wireframe:        bool,
 	program_should_close: bool,
-	container_wrap:       struct {
-		s, t: i32,
-	},
-	texture_filter:       i32,
-	texture_mix:          f32,
-	ui:                   struct {
-		selected_wrap_s, selected_wrap_t: Texture_Wrap_Mode,
-		selected_filter:                  Texture_Filter_Mode,
-	},
 }
-g_state: State = {
-	container_wrap = {s = gl.CLAMP_TO_EDGE, t = gl.CLAMP_TO_EDGE},
-	texture_filter = gl.NEAREST,
-	texture_mix = 0.2,
-	ui = {.Clamp_to_Edge, .Clamp_to_Edge, .Nearest},
-}
+g_state: State
 
 // odinfmt: disable
 g_vertices := [?]f32 {
@@ -100,7 +61,7 @@ main :: proc() {
 	defer devui.destroy()
 
 	shader_program :=
-		glc.shader_load_from_files("textures", "texture_mix_uniform") or_else glc.crash("Error loading shaders")
+		glc.shader_load_from_files("main", "happy_face_look_other_way") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(shader_program)
 
 	vbo, vao, ebo: u32
@@ -131,10 +92,10 @@ main :: proc() {
 	gl.GenTextures(1, &texture1)
 	defer gl.DeleteTextures(1, &texture1)
 	gl.BindTexture(gl.TEXTURE_2D, texture1)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, g_state.container_wrap.s)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, g_state.container_wrap.t)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, g_state.texture_filter)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 
 	width, height, channels: i32
 	data := stbi.load("content/textures/container.jpg", &width, &height, &channels, 0)
@@ -152,7 +113,7 @@ main :: proc() {
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, g_state.texture_filter)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 
 	stbi.set_flip_vertically_on_load(1)
 	data = stbi.load("content/textures/awesomeface.png", &width, &height, &channels, 0)
@@ -179,16 +140,10 @@ main :: proc() {
 
 		gl.ActiveTexture(gl.TEXTURE0)
 		gl.BindTexture(gl.TEXTURE_2D, texture1)
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, g_state.container_wrap.s)
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, g_state.container_wrap.t)
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, g_state.texture_filter)
 		gl.ActiveTexture(gl.TEXTURE1)
 		gl.BindTexture(gl.TEXTURE_2D, texture2)
-		gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, g_state.texture_filter)
 
 		glc.shader_use_program(shader_program)
-		glc.shader_uniform_set(shader_program, "textureMix", g_state.texture_mix)
-
 		gl.BindVertexArray(vao)
 		gl.DrawElements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, nil)
 
@@ -198,26 +153,7 @@ main :: proc() {
 	}
 }
 
-
 ui_render :: proc() {
-	if im.Combo(
-		"Container wrap S",
-		cast(^i32)&g_state.ui.selected_wrap_s,
-		texture_wrap_mode_titles,
-	) {
-		g_state.container_wrap.s = texture_wrap_mode_mapping[g_state.ui.selected_wrap_s]
-	}
-	if im.Combo(
-		"Container wrap T",
-		cast(^i32)&g_state.ui.selected_wrap_t,
-		texture_wrap_mode_titles,
-	) {
-		g_state.container_wrap.t = texture_wrap_mode_mapping[g_state.ui.selected_wrap_t]
-	}
-	if im.Combo("Texture Filter", cast(^i32)&g_state.ui.selected_filter, texture_filter_titles) {
-		g_state.texture_filter = texture_filter_mapping[g_state.ui.selected_filter]
-	}
-	im.SliderFloat("Texture Mix", &g_state.texture_mix, 0.0, 1.0)
 }
 
 ui_render_shortcuts :: proc() {
