@@ -55,7 +55,28 @@ camera_create :: proc(
 }
 
 camera_get_view_matrix :: proc(c: Camera) -> glm.mat4 {
-	return glm.mat4LookAt(c.position, c.position + c.front, c.up)
+	rx, ry, rz := expand_values(c.right)
+	ux, uy, uz := expand_values(c.up)
+	dx, dy, dz := expand_values(-c.front) // inverted z-axis (rotate in opposite direction)
+	px, py, pz := expand_values(-c.position) // transform in opposite direction
+	
+	// odinfmt: disable
+	rotation := glm.mat4{
+		rx, ry, rz, 0,
+		ux, uy, uz, 0,
+		dx, dy, dz, 0,
+		 0,  0,  0, 1,
+	}
+
+	translation := glm.mat4{
+		1, 0, 0, px,
+		0, 1, 0, py,
+		0, 0, 1, pz,
+		0, 0, 0,  1,
+	}
+	// odinfmt: enable
+
+	return rotation * translation
 }
 
 camera_handle_input :: proc(c: ^Camera) {
@@ -84,11 +105,11 @@ camera_handle_input :: proc(c: ^Camera) {
 	c.position.y = fixed_y
 }
 
-camera_on_mouse_move :: proc(c: ^Camera, x, y: f32, constain_pitch: bool) {
+camera_on_mouse_move :: proc(c: ^Camera, x, y: f32, constrain_pitch: bool) {
 	c.yaw += glm.radians(x * c.sensitivity)
 	c.pitch += glm.radians(y * c.sensitivity)
 
-	if (constain_pitch) {
+	if (constrain_pitch) {
 		c.pitch = glm.clamp(c.pitch, glm.radians_f32(-89), glm.radians_f32(89))
 	}
 
