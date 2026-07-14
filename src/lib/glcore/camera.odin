@@ -6,6 +6,7 @@ import im "extern:imgui"
 import glc "lib:glcore"
 
 // odinfmt: disable
+CAMERA_DEFAULT_UP            :: glm.vec3{0.0, 1.0, 0.0}
 CAMERA_DEFAULT_YAW           :: -90.0
 CAMERA_DEFAULT_PITCH         ::   0.0
 CAMERA_DEFAULT_SPEED         ::   2.5
@@ -31,7 +32,7 @@ Camera :: struct #all_or_none {
 
 camera_create :: proc(
 	pos: glm.vec3,
-	up: glm.vec3,
+	up: glm.vec3 = CAMERA_DEFAULT_UP,
 	yaw: f32 = CAMERA_DEFAULT_YAW,
 	pitch: f32 = CAMERA_DEFAULT_PITCH,
 ) -> Camera {
@@ -55,7 +56,7 @@ camera_create :: proc(
 }
 
 camera_get_view_matrix :: proc(c: Camera) -> glm.mat4 {
-	return glm.mat4LookAt(c.position, c.position + c.front, c.world_up)
+	return glm.mat4LookAt(c.position, c.position + c.front, c.up)
 }
 
 camera_handle_input :: proc(c: ^Camera) {
@@ -101,7 +102,7 @@ camera_dev_ui_frame :: proc(c: ^Camera) {
 		im.SliderFloat("FOV", &c.zoom, 10.0, 120.0, "%.0f deg")
 		im.SliderFloat("Speed", &c.movement_speed, 1.0, 50.0, "%.1f")
 		im.DragFloat3("Position", &c.position, 0.1)
-
+		
 		yaw_changed := im.SliderAngle("Yaw", &c.yaw)
 		pitch_changed := im.SliderAngle("Pitch", &c.pitch, -90.0, 90.0)
 		if yaw_changed || pitch_changed {

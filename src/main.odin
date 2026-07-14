@@ -106,12 +106,7 @@ main :: proc() {
 
 	// intial state
 	g_state = {
-		camera             = glc.camera_create(
-			pos = {0.0, 0.0, -3.0},
-			up = {0.0, 1.0, 0.0},
-			yaw = -9.0,
-			pitch = -25.0,
-		),
+		camera             = glc.camera_create(pos = {-3, 1, -2}, yaw = 44, pitch = -11),
 		is_capturing_mouse = false,
 		show_ui            = true,
 	}
@@ -123,10 +118,15 @@ main :: proc() {
 	devui.init_for_sdl_window(g_state.window, gl_ctx)
 	defer devui.destroy()
 
-	shader_program := glc.shader_load_from_files("main") or_else glc.crash("Error loading shaders")
-	defer glc.shader_delete_program(shader_program)
+	lighting_shader :=
+		glc.shader_load_from_files("main") or_else glc.crash("Error loading shaders")
+	defer glc.shader_delete_program(lighting_shader)
 
-	vbo, vao: u32
+	light_cube_shader :=
+		glc.shader_load_from_files("light_cube") or_else glc.crash("Error loading shaders")
+	defer glc.shader_delete_program(light_cube_shader)
+
+	vbo, vao, light_vao: u32
 
 	gl.GenVertexArrays(1, &vao)
 	defer gl.DeleteVertexArrays(1, &vao)
@@ -139,7 +139,17 @@ main :: proc() {
 	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 0) // position
 	gl.EnableVertexAttribArray(0)
 	gl.VertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 3 * size_of(f32)) // texture coords
-	gl.EnableVertexAttribArray(1)
+	// gl.EnableVertexAttribArray(1)
+
+	gl.BindVertexArray(0)
+
+	gl.GenVertexArrays(1, &light_vao)
+	defer gl.DeleteVertexArrays(1, &light_vao)
+	gl.BindVertexArray(light_vao)
+
+	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 0) // position
+	gl.EnableVertexAttribArray(0)
 
 	gl.BindVertexArray(0)
 
@@ -180,12 +190,18 @@ main :: proc() {
 		glc.crash("Bad image")
 	}
 
-	glc.shader_use_program(shader_program)
-	glc.shader_uniform_set(shader_program, "texture1", 0)
-	glc.shader_uniform_set(shader_program, "texture2", 1)
+	// glc.shader_use_program(light_cube_shader)
+	// glc.shader_uniform_set(light_cube_shader, "texture1", 0)
+	// glc.shader_uniform_set(light_cube_shader, "texture2", 1)
 
 
 	gl.Enable(gl.DEPTH_TEST)
+
+	container_model: glm.mat4 = 1
+
+	light_pos := glm.vec3{1.2, 1.0, 2.0}
+	light_cube_model := glm.mat4Translate(light_pos)
+	light_cube_model *= glm.mat4Scale(0.2)
 
 	for !g_state.program_should_close {
 		glc.events_handle(process_events, process_key_input)
@@ -193,7 +209,7 @@ main :: proc() {
 
 		gl.PolygonMode(gl.FRONT_AND_BACK, g_state.use_wireframe ? gl.LINE : gl.FILL)
 
-		gl.ClearColor(0.2, 0.3, 0.3, 1.0)
+		gl.ClearColor(0.0, 0.0, 0.0, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 		gl.ActiveTexture(gl.TEXTURE0)
@@ -209,18 +225,23 @@ main :: proc() {
 			100.0,
 		)
 
-		glc.shader_use_program(shader_program)
-		glc.shader_uniform_set(shader_program, "view", &view)
-		glc.shader_uniform_set(shader_program, "projection", &proj)
-
+		// container
+		glc.shader_use_program(lighting_shader)
+		glc.shader_uniform_set(lighting_shader, "model", &container_model)
+		glc.shader_uniform_set(lighting_shader, "view", &view)
+		glc.shader_uniform_set(lighting_shader, "projection", &proj)
+		glc.shader_uniform_set(lighting_shader, "objectColor", glm.vec3{1.0, 0.5, 0.31})
+		glc.shader_uniform_set(lighting_shader, "lightColor", glm.vec3{1.0, 1.0, 1.0})
 		gl.BindVertexArray(vao)
-		for p, i in CUBE_POSITIONS {
-			model := glm.mat4Translate(p)
-			angle := 20.0 * cast(f32)i
-			model *= glm.mat4Rotate({1, 0.3, 0.5}, glm.radians_f32(angle))
-			glc.shader_uniform_set(shader_program, "model", &model)
-			gl.DrawArrays(gl.TRIANGLES, 0, 36)
-		}
+		gl.DrawArrays(gl.TRIANGLES, 0, 36)
+
+		// light
+		glc.shader_use_program(light_cube_shader)
+		glc.shader_uniform_set(light_cube_shader, "model", &light_cube_model)
+		glc.shader_uniform_set(light_cube_shader, "view", &view)
+		glc.shader_uniform_set(light_cube_shader, "projection", &proj)
+		gl.BindVertexArray(light_vao)
+		gl.DrawArrays(gl.TRIANGLES, 0, 36)
 
 		if (g_state.show_ui) {
 			devui.render_ui("Learning OpenGL", ui_render, ui_render_shortcuts)
