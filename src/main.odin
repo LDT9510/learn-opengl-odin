@@ -27,47 +27,47 @@ g_state: State
 // odinfmt: disable
 @(rodata)
 CUBE_VERTICES := [?]f32 {
-    -0.5, -0.5, -0.5,  0.0, 0.0,
-     0.5, -0.5, -0.5,  1.0, 0.0,
-     0.5,  0.5, -0.5,  1.0, 1.0,
-     0.5,  0.5, -0.5,  1.0, 1.0,
-    -0.5,  0.5, -0.5,  0.0, 1.0,
-    -0.5, -0.5, -0.5,  0.0, 0.0,
+	-0.5, -0.5, -0.5,  0.0,  0.0, -1.0,
+     0.5, -0.5, -0.5,  0.0,  0.0, -1.0,
+     0.5,  0.5, -0.5,  0.0,  0.0, -1.0,
+     0.5,  0.5, -0.5,  0.0,  0.0, -1.0,
+    -0.5,  0.5, -0.5,  0.0,  0.0, -1.0,
+    -0.5, -0.5, -0.5,  0.0,  0.0, -1.0,
 
-    -0.5, -0.5,  0.5,  0.0, 0.0,
-     0.5, -0.5,  0.5,  1.0, 0.0,
-     0.5,  0.5,  0.5,  1.0, 1.0,
-     0.5,  0.5,  0.5,  1.0, 1.0,
-    -0.5,  0.5,  0.5,  0.0, 1.0,
-    -0.5, -0.5,  0.5,  0.0, 0.0,
+    -0.5, -0.5,  0.5,  0.0,  0.0,  1.0,
+     0.5, -0.5,  0.5,  0.0,  0.0,  1.0,
+     0.5,  0.5,  0.5,  0.0,  0.0,  1.0,
+     0.5,  0.5,  0.5,  0.0,  0.0,  1.0,
+    -0.5,  0.5,  0.5,  0.0,  0.0,  1.0,
+    -0.5, -0.5,  0.5,  0.0,  0.0,  1.0,
 
-    -0.5,  0.5,  0.5,  1.0, 0.0,
-    -0.5,  0.5, -0.5,  1.0, 1.0,
-    -0.5, -0.5, -0.5,  0.0, 1.0,
-    -0.5, -0.5, -0.5,  0.0, 1.0,
-    -0.5, -0.5,  0.5,  0.0, 0.0,
-    -0.5,  0.5,  0.5,  1.0, 0.0,
+    -0.5,  0.5,  0.5, -1.0,  0.0,  0.0,
+    -0.5,  0.5, -0.5, -1.0,  0.0,  0.0,
+    -0.5, -0.5, -0.5, -1.0,  0.0,  0.0,
+    -0.5, -0.5, -0.5, -1.0,  0.0,  0.0,
+    -0.5, -0.5,  0.5, -1.0,  0.0,  0.0,
+    -0.5,  0.5,  0.5, -1.0,  0.0,  0.0,
 
-     0.5,  0.5,  0.5,  1.0, 0.0,
-     0.5,  0.5, -0.5,  1.0, 1.0,
-     0.5, -0.5, -0.5,  0.0, 1.0,
-     0.5, -0.5, -0.5,  0.0, 1.0,
-     0.5, -0.5,  0.5,  0.0, 0.0,
-     0.5,  0.5,  0.5,  1.0, 0.0,
+     0.5,  0.5,  0.5,  1.0,  0.0,  0.0,
+     0.5,  0.5, -0.5,  1.0,  0.0,  0.0,
+     0.5, -0.5, -0.5,  1.0,  0.0,  0.0,
+     0.5, -0.5, -0.5,  1.0,  0.0,  0.0,
+     0.5, -0.5,  0.5,  1.0,  0.0,  0.0,
+     0.5,  0.5,  0.5,  1.0,  0.0,  0.0,
 
-    -0.5, -0.5, -0.5,  0.0, 1.0,
-     0.5, -0.5, -0.5,  1.0, 1.0,
-     0.5, -0.5,  0.5,  1.0, 0.0,
-     0.5, -0.5,  0.5,  1.0, 0.0,
-    -0.5, -0.5,  0.5,  0.0, 0.0,
-    -0.5, -0.5, -0.5,  0.0, 1.0,
+    -0.5, -0.5, -0.5,  0.0, -1.0,  0.0,
+     0.5, -0.5, -0.5,  0.0, -1.0,  0.0,
+     0.5, -0.5,  0.5,  0.0, -1.0,  0.0,
+     0.5, -0.5,  0.5,  0.0, -1.0,  0.0,
+    -0.5, -0.5,  0.5,  0.0, -1.0,  0.0,
+    -0.5, -0.5, -0.5,  0.0, -1.0,  0.0,
 
-    -0.5,  0.5, -0.5,  0.0, 1.0,
-     0.5,  0.5, -0.5,  1.0, 1.0,
-     0.5,  0.5,  0.5,  1.0, 0.0,
-     0.5,  0.5,  0.5,  1.0, 0.0,
-    -0.5,  0.5,  0.5,  0.0, 0.0,
-    -0.5,  0.5, -0.5,  0.0, 1.0,
+    -0.5,  0.5, -0.5,  0.0,  1.0,  0.0,
+     0.5,  0.5, -0.5,  0.0,  1.0,  0.0,
+     0.5,  0.5,  0.5,  0.0,  1.0,  0.0,
+     0.5,  0.5,  0.5,  0.0,  1.0,  0.0,
+    -0.5,  0.5,  0.5,  0.0,  1.0,  0.0,
+    -0.5,  0.5, -0.5,  0.0,  1.0,  0.0,
 }
 
 @(rodata)
@@ -136,10 +136,10 @@ main :: proc() {
 	defer gl.DeleteBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
 	gl.BufferData(gl.ARRAY_BUFFER, size_of(CUBE_VERTICES), &CUBE_VERTICES, gl.STATIC_DRAW)
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 0) // position
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 6 * size_of(f32), 0) // position
 	gl.EnableVertexAttribArray(0)
-	gl.VertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 3 * size_of(f32)) // texture coords
-	// gl.EnableVertexAttribArray(1)
+	gl.VertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, 6 * size_of(f32), 3 * size_of(f32)) // normals
+	gl.EnableVertexAttribArray(1)
 
 	gl.BindVertexArray(0)
 
@@ -148,7 +148,7 @@ main :: proc() {
 	gl.BindVertexArray(light_vao)
 
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 5 * size_of(f32), 0) // position
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 6 * size_of(f32), 0) // position
 	gl.EnableVertexAttribArray(0)
 
 	gl.BindVertexArray(0)
@@ -232,8 +232,10 @@ main :: proc() {
 		glc.shader_uniform_set(lighting_shader, "projection", &proj)
 		glc.shader_uniform_set(lighting_shader, "objectColor", glm.vec3{1.0, 0.5, 0.31})
 		glc.shader_uniform_set(lighting_shader, "lightColor", glm.vec3{1.0, 1.0, 1.0})
+		glc.shader_uniform_set(lighting_shader, "lightPos", light_pos)
+		glc.shader_uniform_set(lighting_shader, "viewPos", g_state.camera.position)
 		gl.BindVertexArray(vao)
-		gl.DrawArrays(gl.TRIANGLES, 0, 36)
+		gl.DrawArrays(gl.TRIANGLES, 0, 36) 
 
 		// light
 		glc.shader_use_program(light_cube_shader)
