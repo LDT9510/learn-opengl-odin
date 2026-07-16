@@ -16,5 +16,5 @@ void main()
     // prefer doing this in the CPU
     Normal = mat3(transpose(inverse(model))) * aNormal;
 
-    gl_Position = projection * view * vec4(aPos, 1.0);
+    gl_Position = projection * view * vec4(FragPos, 1.0);
 }

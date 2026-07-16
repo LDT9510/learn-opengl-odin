@@ -133,7 +133,7 @@ main :: proc() {
 	defer devui.destroy()
 
 	lighting_shader :=
-		glc.shader_load_from_files("main") or_else glc.crash("Error loading shaders")
+		glc.shader_load_from_files("phong_parameters") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(lighting_shader)
 
 	light_cube_shader :=
