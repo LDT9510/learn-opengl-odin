@@ -1,3 +1,4 @@
+// Make the light move around the scene
 package learn_opengl
 
 import "core:log"
@@ -190,18 +191,10 @@ main :: proc() {
 		glc.crash("Bad image")
 	}
 
-	// glc.shader_use_program(light_cube_shader)
-	// glc.shader_uniform_set(light_cube_shader, "texture1", 0)
-	// glc.shader_uniform_set(light_cube_shader, "texture2", 1)
-
-
 	gl.Enable(gl.DEPTH_TEST)
 
 	container_model: glm.mat4 = 1
 
-	light_pos := glm.vec3{1.2, 1.0, 2.0}
-	light_cube_model := glm.mat4Translate(light_pos)
-	light_cube_model *= glm.mat4Scale(0.2)
 
 	for !g_state.program_should_close {
 		glc.events_handle(process_events, process_key_input)
@@ -225,6 +218,12 @@ main :: proc() {
 			100.0,
 		)
 
+		time := cast(f32)glc.timing_get_elapsed_seconds()
+		x_v := glm.sin(time)
+		z_v := glm.cos(time)
+
+		light_pos := glm.vec3{x_v, 0.8, z_v}
+
 		// container
 		glc.shader_use_program(lighting_shader)
 		glc.shader_uniform_set(lighting_shader, "model", &container_model)
@@ -235,7 +234,10 @@ main :: proc() {
 		glc.shader_uniform_set(lighting_shader, "lightPos", light_pos)
 		glc.shader_uniform_set(lighting_shader, "viewPos", g_state.camera.position)
 		gl.BindVertexArray(vao)
-		gl.DrawArrays(gl.TRIANGLES, 0, 36) 
+		gl.DrawArrays(gl.TRIANGLES, 0, 36)
+
+		light_cube_model := glm.mat4Translate(light_pos)
+		light_cube_model *= glm.mat4Scale(0.2)
 
 		// light
 		glc.shader_use_program(light_cube_shader)
