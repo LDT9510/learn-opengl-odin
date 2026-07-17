@@ -225,14 +225,21 @@ main :: proc() {
 			100.0,
 		)
 
+		time := cast(f32)glc.timing_get_elapsed_seconds()
+		light_color := glm.vec3{glm.sin(time * 2.0), glm.sin(time * 0.7), glm.sin(time * 1.3)}
+		diffuse_color := light_color * glm.vec3(0.5)
+		ambient_color := diffuse_color * glm.vec3(0.2)
+
 		// container
 		glc.shader_use_program(lighting_shader)
 		glc.shader_uniform_set(lighting_shader, "model", &container_model)
 		glc.shader_uniform_set(lighting_shader, "view", &view)
 		glc.shader_uniform_set(lighting_shader, "projection", &proj)
-		glc.shader_uniform_set(lighting_shader, "lightColor", glm.vec3{1.0, 1.0, 1.0})
 		glc.shader_uniform_set(lighting_shader, "lightPos", light_pos)
 		glc.shader_uniform_set(lighting_shader, "viewPos", g_state.camera.position)
+		glc.shader_uniform_set(lighting_shader, "light.ambient", ambient_color)
+		glc.shader_uniform_set(lighting_shader, "light.diffuse", diffuse_color)
+		glc.shader_uniform_set(lighting_shader, "light.specular", 1.0, 1.0, 1.0)
 		glc.shader_uniform_set(lighting_shader, "material.ambient", 1.0, 0.5, 0.31)
 		glc.shader_uniform_set(lighting_shader, "material.diffuse", 1.0, 0.5, 0.31)
 		glc.shader_uniform_set(lighting_shader, "material.specular", 0.5, 0.5, 0.5)
