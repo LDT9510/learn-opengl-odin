@@ -146,7 +146,10 @@ main :: proc() {
 
 	gl.BindVertexArray(0)
 
-	diffuse_map := glc.texture_load("crate.png") or_else glc.crash("Error loading image")
+	diffuse_map := glc.texture_load("crate_diffuse.png") or_else glc.crash("Error loading image")
+	defer glc.texture_destroy(diffuse_map)
+	specular_map := glc.texture_load("crate_specular.png") or_else glc.crash("Error loading image")
+	defer glc.texture_destroy(specular_map)
 
 	gl.Enable(gl.DEPTH_TEST)
 
@@ -190,9 +193,10 @@ main :: proc() {
 		glc.shader_uniform_set(lighting_shader, "light.diffuse", diffuse_color)
 		glc.shader_uniform_set(lighting_shader, "light.specular", 1.0, 1.0, 1.0)
 		glc.shader_uniform_set(lighting_shader, "material.diffuse", 0) // set the sampler
-		glc.shader_uniform_set(lighting_shader, "material.specular", 0.5, 0.5, 0.5)
+		glc.shader_uniform_set(lighting_shader, "material.specular", 1) // set the sampler
 		glc.shader_uniform_set(lighting_shader, "material.shininess", 32.0)
 		glc.texture_bind(diffuse_map, gl.TEXTURE0)
+		glc.texture_bind(specular_map, gl.TEXTURE1)
 		gl.BindVertexArray(vao)
 		gl.DrawArrays(gl.TRIANGLES, 0, 36)
 

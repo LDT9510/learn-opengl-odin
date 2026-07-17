@@ -35,7 +35,7 @@ texture_load :: proc(image_name: string) -> (texture_id: Texture_Id, ok: bool) {
 }
 
 texture_bind :: proc(texture_id: Texture_Id, texture_slot: u32) {
-	gl.ActiveTexture(gl.TEXTURE0)
+	gl.ActiveTexture(texture_slot)
 	gl.BindTexture(gl.TEXTURE_2D, cast(u32)texture_id)
 }
 
