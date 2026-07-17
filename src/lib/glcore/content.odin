@@ -12,8 +12,8 @@ CONTENT_BASE_PATH :: "content/" when OPENGL_EXERCISES_PATH == "" else OPENGL_EXE
 CONTENT_SHADER_PATH ::
 	CONTENT_BASE_PATH + "shaders/" when OPENGL_EXERCISES_PATH == "" else OPENGL_EXERCISES_PATH
 
-CONTENT_TEXTURE_PATH ::
-	CONTENT_BASE_PATH + "textures/" when OPENGL_EXERCISES_PATH == "" else OPENGL_EXERCISES_PATH
+CONTENT_IMAGE_PATH ::
+	CONTENT_BASE_PATH + "images/" when OPENGL_EXERCISES_PATH == "" else OPENGL_EXERCISES_PATH
 
 VERTEX_SHADER_EXT :: ".vert"
 FRAGMENT_SHADER_EXT :: ".frag"
@@ -22,7 +22,7 @@ Shader_Code :: distinct cstring
 Image_Data :: ^png.Image
 
 content_load_image :: proc(image_name: string) -> (content: Image_Data, ok: bool) {
-	image_path := strings.concatenate({CONTENT_TEXTURE_PATH, image_name})
+	image_path := strings.concatenate({CONTENT_IMAGE_PATH, image_name})
 	defer delete(image_path)
 
 	image_data, err := png.load(image_path)
