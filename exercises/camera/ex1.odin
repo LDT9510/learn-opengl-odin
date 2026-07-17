@@ -85,7 +85,6 @@ CUBE_POSITIONS := [?]glm.vec3 {
     { 1.5,  0.2, -1.5},
     {-1.3,  1.0, -1.5},
 }
-
 // odinfmt: enable
 
 main :: proc() {
