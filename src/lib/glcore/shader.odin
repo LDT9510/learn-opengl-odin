@@ -97,15 +97,11 @@ shader_load_diff_name_files :: proc(
 	ok: bool,
 ) {
 	// NOTE: to avoid unnecessary allocations, read the file as a cstring directly
-	vertex_code := content_read_shader_code(vertex_file_name, .Vertex, context.allocator) or_return
-	fragment_code := content_read_shader_code(
-		fragment_file_name,
-		.Fragment,
-		context.allocator,
-	) or_return
+	vertex_code := content_load_shader_code(vertex_file_name, .Vertex) or_return
+	fragment_code := content_load_shader_code(fragment_file_name, .Fragment) or_return
 	defer {
-		content_delete_shader_code(vertex_code)
-		content_delete_shader_code(fragment_code)
+		content_destroy_shader_code(vertex_code)
+		content_destroy_shader_code(fragment_code)
 	}
 
 	return shader_load_from_code(vertex_code, fragment_code)

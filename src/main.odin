@@ -4,9 +4,9 @@ import "core:log"
 import glm "core:math/linalg/glsl"
 import "core:mem"
 import "core:sys/windows"
+
 import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
-import stbi "vendor:stb/image"
 
 import "lib:devui"
 import glc "lib:glcore"
@@ -27,47 +27,48 @@ g_state: State
 // odinfmt: disable
 @(rodata)
 CUBE_VERTICES := [?]f32 {
-	-0.5, -0.5, -0.5,  0.0,  0.0, -1.0,
-     0.5, -0.5, -0.5,  0.0,  0.0, -1.0,
-     0.5,  0.5, -0.5,  0.0,  0.0, -1.0,
-     0.5,  0.5, -0.5,  0.0,  0.0, -1.0,
-    -0.5,  0.5, -0.5,  0.0,  0.0, -1.0,
-    -0.5, -0.5, -0.5,  0.0,  0.0, -1.0,
+	 // positions         // normals           // textures coords
+    -0.5, -0.5, -0.5,  0.0,  0.0, -1.0,  0.0, 0.0,
+     0.5, -0.5, -0.5,  0.0,  0.0, -1.0,  1.0, 0.0,
+     0.5,  0.5, -0.5,  0.0,  0.0, -1.0,  1.0, 1.0,
+     0.5,  0.5, -0.5,  0.0,  0.0, -1.0,  1.0, 1.0,
+    -0.5,  0.5, -0.5,  0.0,  0.0, -1.0,  0.0, 1.0,
+    -0.5, -0.5, -0.5,  0.0,  0.0, -1.0,  0.0, 0.0,
 
-    -0.5, -0.5,  0.5,  0.0,  0.0,  1.0,
-     0.5, -0.5,  0.5,  0.0,  0.0,  1.0,
-     0.5,  0.5,  0.5,  0.0,  0.0,  1.0,
-     0.5,  0.5,  0.5,  0.0,  0.0,  1.0,
-    -0.5,  0.5,  0.5,  0.0,  0.0,  1.0,
-    -0.5, -0.5,  0.5,  0.0,  0.0,  1.0,
+    -0.5, -0.5,  0.5,  0.0,  0.0,  1.0,  0.0, 0.0,
+     0.5, -0.5,  0.5,  0.0,  0.0,  1.0,  1.0, 0.0,
+     0.5,  0.5,  0.5,  0.0,  0.0,  1.0,  1.0, 1.0,
+     0.5,  0.5,  0.5,  0.0,  0.0,  1.0,  1.0, 1.0,
+    -0.5,  0.5,  0.5,  0.0,  0.0,  1.0,  0.0, 1.0,
+    -0.5, -0.5,  0.5,  0.0,  0.0,  1.0,  0.0, 0.0,
 
-    -0.5,  0.5,  0.5, -1.0,  0.0,  0.0,
-    -0.5,  0.5, -0.5, -1.0,  0.0,  0.0,
-    -0.5, -0.5, -0.5, -1.0,  0.0,  0.0,
-    -0.5, -0.5, -0.5, -1.0,  0.0,  0.0,
-    -0.5, -0.5,  0.5, -1.0,  0.0,  0.0,
-    -0.5,  0.5,  0.5, -1.0,  0.0,  0.0,
+    -0.5,  0.5,  0.5, -1.0,  0.0,  0.0,  1.0, 0.0,
+    -0.5,  0.5, -0.5, -1.0,  0.0,  0.0,  1.0, 1.0,
+    -0.5, -0.5, -0.5, -1.0,  0.0,  0.0,  0.0, 1.0,
+    -0.5, -0.5, -0.5, -1.0,  0.0,  0.0,  0.0, 1.0,
+    -0.5, -0.5,  0.5, -1.0,  0.0,  0.0,  0.0, 0.0,
+    -0.5,  0.5,  0.5, -1.0,  0.0,  0.0,  1.0, 0.0,
 
-     0.5,  0.5,  0.5,  1.0,  0.0,  0.0,
-     0.5,  0.5, -0.5,  1.0,  0.0,  0.0,
-     0.5, -0.5, -0.5,  1.0,  0.0,  0.0,
-     0.5, -0.5, -0.5,  1.0,  0.0,  0.0,
-     0.5, -0.5,  0.5,  1.0,  0.0,  0.0,
-     0.5,  0.5,  0.5,  1.0,  0.0,  0.0,
+     0.5,  0.5,  0.5,  1.0,  0.0,  0.0,  1.0, 0.0,
+     0.5,  0.5, -0.5,  1.0,  0.0,  0.0,  1.0, 1.0,
+     0.5, -0.5, -0.5,  1.0,  0.0,  0.0,  0.0, 1.0,
+     0.5, -0.5, -0.5,  1.0,  0.0,  0.0,  0.0, 1.0,
+     0.5, -0.5,  0.5,  1.0,  0.0,  0.0,  0.0, 0.0,
+     0.5,  0.5,  0.5,  1.0,  0.0,  0.0,  1.0, 0.0,
 
-    -0.5, -0.5, -0.5,  0.0, -1.0,  0.0,
-     0.5, -0.5, -0.5,  0.0, -1.0,  0.0,
-     0.5, -0.5,  0.5,  0.0, -1.0,  0.0,
-     0.5, -0.5,  0.5,  0.0, -1.0,  0.0,
-    -0.5, -0.5,  0.5,  0.0, -1.0,  0.0,
-    -0.5, -0.5, -0.5,  0.0, -1.0,  0.0,
+    -0.5, -0.5, -0.5,  0.0, -1.0,  0.0,  0.0, 1.0,
+     0.5, -0.5, -0.5,  0.0, -1.0,  0.0,  1.0, 1.0,
+     0.5, -0.5,  0.5,  0.0, -1.0,  0.0,  1.0, 0.0,
+     0.5, -0.5,  0.5,  0.0, -1.0,  0.0,  1.0, 0.0,
+    -0.5, -0.5,  0.5,  0.0, -1.0,  0.0,  0.0, 0.0,
+    -0.5, -0.5, -0.5,  0.0, -1.0,  0.0,  0.0, 1.0,
 
-    -0.5,  0.5, -0.5,  0.0,  1.0,  0.0,
-     0.5,  0.5, -0.5,  0.0,  1.0,  0.0,
-     0.5,  0.5,  0.5,  0.0,  1.0,  0.0,
-     0.5,  0.5,  0.5,  0.0,  1.0,  0.0,
-    -0.5,  0.5,  0.5,  0.0,  1.0,  0.0,
-    -0.5,  0.5, -0.5,  0.0,  1.0,  0.0,
+    -0.5,  0.5, -0.5,  0.0,  1.0,  0.0,  0.0, 1.0,
+     0.5,  0.5, -0.5,  0.0,  1.0,  0.0,  1.0, 1.0,
+     0.5,  0.5,  0.5,  0.0,  1.0,  0.0,  1.0, 0.0,
+     0.5,  0.5,  0.5,  0.0,  1.0,  0.0,  1.0, 0.0,
+    -0.5,  0.5,  0.5,  0.0,  1.0,  0.0,  0.0, 0.0,
+    -0.5,  0.5, -0.5,  0.0,  1.0,  0.0,  0.0, 1.0,
 }
 // odinfmt: enable
 
@@ -85,6 +86,8 @@ main :: proc() {
 		context.allocator = mem.tracking_allocator(&tracking_allocator)
 		defer glc.reset_tracking_allocator()
 		log.info("Debug mode")
+	} else {
+		context.allocator = context.temp_allocator
 	}
 
 	glc.print_sdl_version()
@@ -121,10 +124,15 @@ main :: proc() {
 	defer gl.DeleteBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
 	gl.BufferData(gl.ARRAY_BUFFER, size_of(CUBE_VERTICES), &CUBE_VERTICES, gl.STATIC_DRAW)
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 6 * size_of(f32), 0) // position
+	// positions
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 0)
 	gl.EnableVertexAttribArray(0)
-	gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, 6 * size_of(f32), 3 * size_of(f32)) // normals
+	// normals
+	gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 3 * size_of(f32))
 	gl.EnableVertexAttribArray(1)
+	// textures coords
+	gl.VertexAttribPointer(2, 2, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 6 * size_of(f32))
+	gl.EnableVertexAttribArray(2)
 
 	gl.BindVertexArray(0)
 
@@ -133,60 +141,22 @@ main :: proc() {
 	gl.BindVertexArray(light_vao)
 
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 6 * size_of(f32), 0) // position
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 8 * size_of(f32), 0) // position
 	gl.EnableVertexAttribArray(0)
 
 	gl.BindVertexArray(0)
 
-	texture1, texture2: u32
-	gl.GenTextures(1, &texture1)
-	defer gl.DeleteTextures(1, &texture1)
-	gl.BindTexture(gl.TEXTURE_2D, texture1)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-
-	width, height, channels: i32
-	data := stbi.load("content/textures/container.jpg", &width, &height, &channels, 0)
-	if data != nil {
-		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, width, height, 0, gl.RGB, gl.UNSIGNED_BYTE, data)
-		gl.GenerateMipmap(gl.TEXTURE_2D)
-		stbi.image_free(data)
-	} else {
-		glc.crash("Bad image")
-	}
-
-	gl.GenTextures(1, &texture2)
-	defer gl.DeleteTextures(1, &texture2)
-	gl.BindTexture(gl.TEXTURE_2D, texture2)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-
-	stbi.set_flip_vertically_on_load(1)
-	data = stbi.load("content/textures/awesomeface.png", &width, &height, &channels, 0)
-	if data != nil {
-		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data)
-		gl.GenerateMipmap(gl.TEXTURE_2D)
-		stbi.image_free(data)
-	} else {
-		glc.crash("Bad image")
-	}
-
-	// glc.shader_use_program(light_cube_shader)
-	// glc.shader_uniform_set(light_cube_shader, "texture1", 0)
-	// glc.shader_uniform_set(light_cube_shader, "texture2", 1)
-
+	diffuse_map := glc.texture_load("crate.png") or_else glc.crash("Error loading image")
 
 	gl.Enable(gl.DEPTH_TEST)
 
-	container_model: glm.mat4 = 1
+	container_model := glm.mat4(1)
 
 	light_pos := glm.vec3{1.2, 1.0, 2.0}
 	light_cube_model := glm.mat4Translate(light_pos)
 	light_cube_model *= glm.mat4Scale(0.2)
+
+	free_all(context.allocator)
 
 	for !g_state.program_should_close {
 		glc.events_handle(process_events, process_key_input)
@@ -197,11 +167,6 @@ main :: proc() {
 		gl.ClearColor(0.0, 0.0, 0.0, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
-		gl.ActiveTexture(gl.TEXTURE0)
-		gl.BindTexture(gl.TEXTURE_2D, texture1)
-		gl.ActiveTexture(gl.TEXTURE1)
-		gl.BindTexture(gl.TEXTURE_2D, texture2)
-
 		view := glc.camera_get_view_matrix(g_state.camera)
 		proj := glm.mat4Perspective(
 			glm.radians(g_state.camera.zoom),
@@ -210,8 +175,7 @@ main :: proc() {
 			100.0,
 		)
 
-		time := cast(f32)glc.timing_get_elapsed_seconds()
-		light_color := glm.vec3{glm.sin(time * 2.0), glm.sin(time * 0.7), glm.sin(time * 1.3)}
+		light_color := glm.vec3(1)
 		diffuse_color := light_color * glm.vec3(0.5)
 		ambient_color := diffuse_color * glm.vec3(0.2)
 
@@ -225,10 +189,10 @@ main :: proc() {
 		glc.shader_uniform_set(lighting_shader, "light.ambient", ambient_color)
 		glc.shader_uniform_set(lighting_shader, "light.diffuse", diffuse_color)
 		glc.shader_uniform_set(lighting_shader, "light.specular", 1.0, 1.0, 1.0)
-		glc.shader_uniform_set(lighting_shader, "material.ambient", 1.0, 0.5, 0.31)
-		glc.shader_uniform_set(lighting_shader, "material.diffuse", 1.0, 0.5, 0.31)
+		glc.shader_uniform_set(lighting_shader, "material.diffuse", 0) // set the sampler
 		glc.shader_uniform_set(lighting_shader, "material.specular", 0.5, 0.5, 0.5)
 		glc.shader_uniform_set(lighting_shader, "material.shininess", 32.0)
+		glc.texture_bind(diffuse_map, gl.TEXTURE0)
 		gl.BindVertexArray(vao)
 		gl.DrawArrays(gl.TRIANGLES, 0, 36)
 
@@ -245,6 +209,8 @@ main :: proc() {
 		}
 
 		sdl.GL_SwapWindow(g_state.window)
+
+		free_all(context.allocator)
 	}
 }
 

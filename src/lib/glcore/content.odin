@@ -1,6 +1,6 @@
 package glcore
 
-import "base:runtime"
+import "core:image/png"
 import "core:log"
 import "core:os"
 import "core:strings"
@@ -8,46 +8,61 @@ import "core:strings"
 OPENGL_EXERCISES_PATH :: #config(OPENGL_EXERCISES_PATH, "")
 
 CONTENT_BASE_PATH :: "content/" when OPENGL_EXERCISES_PATH == "" else OPENGL_EXERCISES_PATH
+
 CONTENT_SHADER_PATH ::
 	CONTENT_BASE_PATH + "shaders/" when OPENGL_EXERCISES_PATH == "" else OPENGL_EXERCISES_PATH
+
+CONTENT_TEXTURE_PATH ::
+	CONTENT_BASE_PATH + "textures/" when OPENGL_EXERCISES_PATH == "" else OPENGL_EXERCISES_PATH
 
 VERTEX_SHADER_EXT :: ".vert"
 FRAGMENT_SHADER_EXT :: ".frag"
 
 Shader_Code :: distinct cstring
+Image_Data :: ^png.Image
 
-content_read_shader_code :: proc(
+content_load_image :: proc(image_name: string) -> (content: Image_Data, ok: bool) {
+	image_path := strings.concatenate({CONTENT_TEXTURE_PATH, image_name})
+	defer delete(image_path)
+
+	image_data, err := png.load(image_path)
+	if err != nil {
+		log.errorf("Failed to load image '%s': %v", image_path, err)
+		return
+	}
+
+	return image_data, true
+}
+
+content_destroy_image :: proc(image_data: Image_Data) {
+	png.destroy(image_data)
+}
+
+content_load_shader_code :: proc(
 	shader_name: string,
 	shader_type: Shader_Type,
-	allocator: runtime.Allocator,
 ) -> (
 	content: Shader_Code,
 	ok: bool,
 ) {
 	extension := VERTEX_SHADER_EXT if shader_type == .Vertex else FRAGMENT_SHADER_EXT
-	shader_file_path := strings.concatenate({CONTENT_SHADER_PATH, shader_name, extension}, allocator)
+	shader_file_path := strings.concatenate({CONTENT_SHADER_PATH, shader_name, extension})
 	defer delete(shader_file_path)
 
-	file_content := cast(string)_content_read_bytes(shader_file_path, allocator) or_return
+	file_content := cast(string)_content_read_bytes(shader_file_path) or_return
 	defer delete(file_content)
 
-	shader_code := cast(Shader_Code)strings.clone_to_cstring(file_content, allocator)
+	shader_code := cast(Shader_Code)strings.clone_to_cstring(file_content)
 
 	return shader_code, true
 }
 
-content_delete_shader_code :: proc(content: Shader_Code) {
+content_destroy_shader_code :: proc(content: Shader_Code) {
 	delete(cast(string)content)
 }
 
-_content_read_bytes :: proc(
-	path: string,
-	allocator: runtime.Allocator,
-) -> (
-	data: []byte,
-	ok: bool,
-) {
-	content, error := os.read_entire_file(path, allocator)
+_content_read_bytes :: proc(path: string) -> (data: []byte, ok: bool) {
+	content, error := os.read_entire_file(path, context.allocator)
 
 	if error != nil {
 		log.errorf("Failed to load content '%s': %v", path, error)
