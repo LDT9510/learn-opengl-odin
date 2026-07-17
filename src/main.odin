@@ -230,12 +230,15 @@ main :: proc() {
 		glc.shader_uniform_set(lighting_shader, "model", &container_model)
 		glc.shader_uniform_set(lighting_shader, "view", &view)
 		glc.shader_uniform_set(lighting_shader, "projection", &proj)
-		glc.shader_uniform_set(lighting_shader, "objectColor", glm.vec3{1.0, 0.5, 0.31})
 		glc.shader_uniform_set(lighting_shader, "lightColor", glm.vec3{1.0, 1.0, 1.0})
 		glc.shader_uniform_set(lighting_shader, "lightPos", light_pos)
 		glc.shader_uniform_set(lighting_shader, "viewPos", g_state.camera.position)
+		glc.shader_uniform_set(lighting_shader, "material.ambient", 1.0, 0.5, 0.31)
+		glc.shader_uniform_set(lighting_shader, "material.diffuse", 1.0, 0.5, 0.31)
+		glc.shader_uniform_set(lighting_shader, "material.specular", 0.5, 0.5, 0.5)
+		glc.shader_uniform_set(lighting_shader, "material.shininess", 32.0)
 		gl.BindVertexArray(vao)
-		gl.DrawArrays(gl.TRIANGLES, 0, 36) 
+		gl.DrawArrays(gl.TRIANGLES, 0, 36)
 
 		// light
 		glc.shader_use_program(light_cube_shader)
