@@ -1,4 +1,4 @@
-// Change the light cube color when changing the light color
+// Simulate real world materials
 package learn_opengl
 
 import "core:log"
@@ -9,6 +9,7 @@ import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 import stbi "vendor:stb/image"
 
+import im "extern:imgui"
 import "lib:devui"
 import glc "lib:glcore"
 
@@ -22,6 +23,11 @@ State :: struct {
 	window:               ^sdl.Window,
 	is_capturing_mouse:   bool,
 	show_ui:              bool,
+	varying_light:        bool,
+	current_material:     struct {
+		value: Material,
+		index: i32,
+	},
 }
 g_state: State
 
@@ -85,7 +91,131 @@ CUBE_POSITIONS := [?]glm.vec3 {
     {-1.3,  1.0, -1.5},
 }
 
+Material :: struct {
+	ambient: glm.vec3,
+	diffuse: glm.vec3,
+	specular: glm.vec3,
+	shininess: f32,
+}
+
+@(rodata)
+MATERIALS := [?]Material {
+	{ ambient = { 0.0215, 0.1745, 0.0215 },
+      diffuse = { 0.07568, 0.61424, 0.07568 },
+      specular = { 0.633, 0.727811, 0.633 },
+      shininess = 76.8 },  // emerald
+    { ambient = { 0.135, 0.2225, 0.1575 },
+      diffuse = { 0.54, 0.89, 0.63 },
+      specular = { 0.316228, 0.316228, 0.316228 },
+      shininess = 12.8 },  // jade
+    { ambient = { 0.05375, 0.05, 0.06625 },
+      diffuse = { 0.18275, 0.17, 0.22525 },
+      specular = { 0.332741, 0.328634, 0.346435 },
+      shininess = 38.4 },  // obsidian
+    { ambient = { 0.25, 0.20725, 0.20725 },
+      diffuse = { 1.0, 0.829, 0.829 },
+      specular = { 0.296648, 0.296648, 0.296648 },
+      shininess = 11.264 },  // pearl
+    { ambient = { 0.1745, 0.01175, 0.01175 },
+      diffuse = { 0.61424, 0.04136, 0.04136 },
+      specular = { 0.727811, 0.626959, 0.626959 },
+      shininess = 76.8 },  // ruby
+    { ambient = { 0.1, 0.18725, 0.1745 },
+      diffuse = { 0.396, 0.74151, 0.69102 },
+      specular = { 0.297254, 0.30829, 0.306678 },
+      shininess = 12.8 },  // turquoise
+    { ambient = { 0.329412, 0.223529, 0.027451 },
+      diffuse = { 0.780392, 0.568627, 0.113725 },
+      specular = { 0.992157, 0.941176, 0.807843 },
+      shininess = 27.897436 },  // brass
+    { ambient = { 0.2125, 0.1275, 0.054 },
+      diffuse = { 0.714, 0.4284, 0.18144 },
+      specular = { 0.393548, 0.271906, 0.166721 },
+      shininess = 25.6 },  // bronze
+    { ambient = { 0.25, 0.25, 0.25 },
+      diffuse = { 0.4, 0.4, 0.4 },
+      specular = { 0.774597, 0.774597, 0.774597 },
+      shininess = 76.8 },  // chrome
+    { ambient = { 0.19125, 0.0735, 0.0225 },
+      diffuse = { 0.7038, 0.27048, 0.0828 },
+      specular = { 0.256777, 0.137622, 0.086014 },
+      shininess = 12.8 },  // copper
+    { ambient = { 0.24725, 0.1995, 0.0745 },
+      diffuse = { 0.75164, 0.60648, 0.22648 },
+      specular = { 0.628281, 0.555802, 0.366065 },
+      shininess = 51.2 },  // gold
+    { ambient = { 0.19225, 0.19225, 0.19225 },
+      diffuse = { 0.50754, 0.50754, 0.50754 },
+      specular = { 0.508273, 0.508273, 0.508273 },
+      shininess = 51.2 },  // silver
+    { ambient = { 0.0, 0.0, 0.0 },
+      diffuse = { 0.01, 0.01, 0.01 },
+      specular = { 0.50, 0.50, 0.50 },
+      shininess = 32.0 },  // black plastic
+    { ambient = { 0.0, 0.1, 0.06 },
+      diffuse = { 0.0, 0.509804, 0.509804 },
+      specular = { 0.501961, 0.501961, 0.501961 },
+      shininess = 32.0 },  // cyan plastic
+    { ambient = { 0.0, 0.0, 0.0 },
+      diffuse = { 0.1, 0.35, 0.1 },
+      specular = { 0.45, 0.55, 0.45 },
+      shininess = 32.0 },  // green plastic
+    { ambient = { 0.0, 0.0, 0.0 },
+      diffuse = { 0.5, 0.0, 0.0 },
+      specular = { 0.7, 0.6, 0.6 },
+      shininess = 32.0 },  // red plastic
+    { ambient = { 0.0, 0.0, 0.0 },
+      diffuse = { 0.55, 0.55, 0.55 },
+      specular = { 0.70, 0.70, 0.70 },
+      shininess = 32.0 },  // white plastic
+    { ambient = { 0.0, 0.0, 0.0 },
+      diffuse = { 0.5, 0.5, 0.0 },
+      specular = { 0.60, 0.60, 0.50 },
+      shininess = 32.0 },  // yellow plastic
+    { ambient = { 0.02, 0.02, 0.02 },
+      diffuse = { 0.01, 0.01, 0.01 },
+      specular = { 0.4, 0.4, 0.4 },
+      shininess = 10.0 },  // black rubber
+    { ambient = { 0.0, 0.05, 0.05 },
+      diffuse = { 0.4, 0.5, 0.5 },
+      specular = { 0.04, 0.7, 0.7 },
+      shininess = 10.0 },  // cyan rubber
+    { ambient = { 0.0, 0.05, 0.05 },
+      diffuse = { 0.4, 0.5, 0.4 },
+      specular = { 0.04, 0.7, 0.04 },
+      shininess = 10.0 },  // green rubber
+    { ambient = { 0.05, 0.0, 0.0 },
+      diffuse = { 0.5, 0.4, 0.4 },
+      specular = { 0.7, 0.04, 0.04 },
+      shininess = 10.0 },  // red rubber
+    { ambient = { 0.05, 0.05, 0.05 },
+      diffuse = { 0.5, 0.5, 0.5 },
+      specular = { 0.7, 0.7, 0.7 },
+      shininess = 10.0 },  // white rubber
+    { ambient = { 0.05, 0.05, 0.0 },
+      diffuse = { 0.5, 0.5, 0.4 },
+      specular = { 0.7, 0.7, 0.04 },
+      shininess = 10.0 },  // yellow rubber
+}
 // odinfmt: enable
+
+material_names :: proc() -> cstring {
+	// must match the list above, in order, the last element must always contain `\x00` at the end
+	// odinfmt: disable
+	@(static, rodata)
+	NAMES := [?]cstring {
+		"emerald",      "jade",          "obsidian",       "pearl",        "ruby",
+		"turquoise",    "brass",         "bronze",         "chrome",       "copper",
+		"gold",         "silver",        "black plastic",  "cyan plastic", "green plastic",
+		"red plastic",  "white plastic", "yellow plastic", "black rubber", "cyan rubber",
+		"green rubber", "red rubber",    "white rubber",   "yellow rubber\x00",
+	}
+	// odinfmt: enable
+
+	names_bytes := cast([^]u8)NAMES[0]
+
+	return cast(cstring)names_bytes
+}
 
 main :: proc() {
 	when ODIN_OS == .Windows {
@@ -110,6 +240,10 @@ main :: proc() {
 		camera             = glc.camera_create(pos = {-3, 1, -2}, yaw = 44, pitch = -11),
 		is_capturing_mouse = false,
 		show_ui            = true,
+		varying_light      = true,
+		current_material = {
+			value = MATERIALS[0],
+		},
 	}
 
 	gl_ctx: sdl.GLContext
@@ -124,7 +258,9 @@ main :: proc() {
 	defer glc.shader_delete_program(lighting_shader)
 
 	light_cube_shader :=
-		glc.shader_load_from_files("light_cube", "light_cube_changing") or_else glc.crash("Error loading shaders")
+		glc.shader_load_from_files("light_cube", "light_cube_changing") or_else glc.crash(
+			"Error loading shaders",
+		)
 	defer glc.shader_delete_program(light_cube_shader)
 
 	vbo, vao, light_vao: u32
@@ -221,10 +357,17 @@ main :: proc() {
 			100.0,
 		)
 
-		time := cast(f32)glc.timing_get_elapsed_seconds()
-		light_color := glm.vec3{glm.sin(time * 2.0), glm.sin(time * 0.7), glm.sin(time * 1.3)}
-		diffuse_color := light_color * glm.vec3(0.5)
-		ambient_color := diffuse_color * glm.vec3(0.2)
+		diffuse_color: glm.vec3
+		ambient_color: glm.vec3
+		if (g_state.varying_light) {
+			time := cast(f32)glc.timing_get_elapsed_seconds()
+			light_color := glm.vec3{glm.sin(time * 2.0), glm.sin(time * 0.7), glm.sin(time * 1.3)}
+			diffuse_color = light_color * glm.vec3(0.5)
+			ambient_color = diffuse_color * glm.vec3(0.2)
+		} else {
+			diffuse_color = glm.vec3(0.5)
+			ambient_color = glm.vec3(0.2)
+		}
 
 		// container
 		glc.shader_use_program(lighting_shader)
@@ -236,10 +379,26 @@ main :: proc() {
 		glc.shader_uniform_set(lighting_shader, "light.ambient", ambient_color)
 		glc.shader_uniform_set(lighting_shader, "light.diffuse", diffuse_color)
 		glc.shader_uniform_set(lighting_shader, "light.specular", 1.0, 1.0, 1.0)
-		glc.shader_uniform_set(lighting_shader, "material.ambient", 1.0, 0.5, 0.31)
-		glc.shader_uniform_set(lighting_shader, "material.diffuse", 1.0, 0.5, 0.31)
-		glc.shader_uniform_set(lighting_shader, "material.specular", 0.5, 0.5, 0.5)
-		glc.shader_uniform_set(lighting_shader, "material.shininess", 32.0)
+		glc.shader_uniform_set(
+			lighting_shader,
+			"material.ambient",
+			g_state.current_material.value.ambient,
+		)
+		glc.shader_uniform_set(
+			lighting_shader,
+			"material.diffuse",
+			g_state.current_material.value.diffuse,
+		)
+		glc.shader_uniform_set(
+			lighting_shader,
+			"material.specular",
+			g_state.current_material.value.specular,
+		)
+		glc.shader_uniform_set(
+			lighting_shader,
+			"material.shininess",
+			g_state.current_material.value.shininess,
+		)
 		gl.BindVertexArray(vao)
 		gl.DrawArrays(gl.TRIANGLES, 0, 36)
 
@@ -262,6 +421,12 @@ main :: proc() {
 
 ui_render :: proc() {
 	glc.camera_dev_ui_frame(&g_state.camera)
+
+	im.Checkbox("Varying Light Color", &g_state.varying_light)
+
+	if (im.Combo("Material", &g_state.current_material.index, material_names())) {
+		g_state.current_material.value = MATERIALS[g_state.current_material.index]
+	}
 }
 
 ui_render_shortcuts :: proc() {
