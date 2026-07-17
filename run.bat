@@ -25,6 +25,7 @@ set opt_flags=^
 
 set is_command_known=no
 set is_debug=no
+set attach_debugger=no
 
 if %command%=="" (
 	set is_command_known=yes
@@ -35,6 +36,10 @@ if %command%=="debug" (
 	set is_debug=yes
 	set opt_flags=^
 		-debug
+
+	if "%~2"=="attach" (
+		set attach_debugger=yes
+	)
 )
 if %command%=="release" (
 	set executable=learn_opengl.exe
@@ -103,5 +108,10 @@ if %is_debug%==no (
 	%final_build_command% && %output_dir%\%executable%
 )
 if %is_debug%==yes (
-	%final_build_command% && raddbg %output_dir%\%executable% --project:./misc/project.raddbg
+	if %attach_debugger%==yes (
+		%final_build_command% && raddbg %output_dir%\%executable% --project:./misc/project.raddbg
+	)
+	if %attach_debugger%==no (
+		%final_build_command% && %output_dir%\%executable%
+	)
 )
