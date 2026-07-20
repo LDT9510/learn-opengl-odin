@@ -1,3 +1,4 @@
+// Invert the colors of the specular map in the fragment shader
 package learn_opengl
 
 import "core:log"

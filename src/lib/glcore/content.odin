@@ -1,6 +1,8 @@
 package glcore
 
-import "core:image/png"
+@require import "core:image/png"
+@require import "core:image/jpeg"
+import "core:image"
 import "core:log"
 import "core:os"
 import "core:strings"
@@ -19,13 +21,13 @@ VERTEX_SHADER_EXT :: ".vert"
 FRAGMENT_SHADER_EXT :: ".frag"
 
 Shader_Code :: distinct cstring
-Image_Data :: ^png.Image
+Image_Data :: ^image.Image
 
 content_load_image :: proc(image_name: string) -> (content: Image_Data, ok: bool) {
 	image_path := strings.concatenate({CONTENT_IMAGE_PATH, image_name})
 	defer delete(image_path)
 
-	image_data, err := png.load(image_path)
+	image_data, err := image.load(image_path)
 	if err != nil {
 		log.errorf("Failed to load image '%s': %v", image_path, err)
 		return
@@ -35,7 +37,7 @@ content_load_image :: proc(image_name: string) -> (content: Image_Data, ok: bool
 }
 
 content_destroy_image :: proc(image_data: Image_Data) {
-	png.destroy(image_data)
+	image.destroy(image_data)
 }
 
 content_load_shader_code :: proc(

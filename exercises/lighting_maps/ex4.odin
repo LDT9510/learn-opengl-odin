@@ -1,4 +1,4 @@
-// Create an specular map with colors instead of grayscale
+// Add an emission map
 package learn_opengl
 
 import "core:log"
@@ -108,7 +108,7 @@ main :: proc() {
 	defer devui.destroy()
 
 	lighting_shader :=
-		glc.shader_load_from_files("main") or_else glc.crash("Error loading shaders")
+		glc.shader_load_from_files("main", "emission_mapping") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(lighting_shader)
 
 	light_cube_shader :=
@@ -150,8 +150,10 @@ main :: proc() {
 
 	diffuse_map := glc.texture_load("crate_diffuse.png") or_else glc.crash("Error loading image")
 	defer glc.texture_destroy(diffuse_map)
-	specular_map := glc.texture_load("crate_specular_colored.png") or_else glc.crash("Error loading image")
+	specular_map := glc.texture_load("crate_specular.png") or_else glc.crash("Error loading image")
 	defer glc.texture_destroy(specular_map)
+	emission_map := glc.texture_load("crate_emission.jpg") or_else glc.crash("Error loading image")
+	defer glc.texture_destroy(emission_map)
 
 	gl.Enable(gl.DEPTH_TEST)
 
@@ -196,9 +198,11 @@ main :: proc() {
 		glc.shader_uniform_set(lighting_shader, "light.specular", 1.0, 1.0, 1.0)
 		glc.shader_uniform_set(lighting_shader, "material.diffuse", 0) // set the sampler
 		glc.shader_uniform_set(lighting_shader, "material.specular", 1) // set the sampler
+		glc.shader_uniform_set(lighting_shader, "material.emission", 2) // set the sampler
 		glc.shader_uniform_set(lighting_shader, "material.shininess", 32.0)
 		glc.texture_bind(diffuse_map, gl.TEXTURE0)
 		glc.texture_bind(specular_map, gl.TEXTURE1)
+		glc.texture_bind(emission_map, gl.TEXTURE2)
 		gl.BindVertexArray(vao)
 		gl.DrawArrays(gl.TRIANGLES, 0, 36)
 
