@@ -1,3 +1,4 @@
+// Play with the light components
 package learn_opengl
 
 import "core:log"
@@ -8,6 +9,7 @@ import "core:sys/windows"
 import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 
+import im "extern:imgui"
 import "lib:devui"
 import glc "lib:glcore"
 
@@ -21,6 +23,11 @@ State :: struct {
 	window:               ^sdl.Window,
 	is_capturing_mouse:   bool,
 	show_ui:              bool,
+	light:                struct {
+		ambient:  glm.vec3,
+		diffuse:  glm.vec3,
+		specular: glm.vec3,
+	},
 }
 g_state: State
 
@@ -94,9 +101,10 @@ main :: proc() {
 
 	// intial state
 	g_state = {
-		camera             = glc.camera_create(pos = {-3, 1, -2}, yaw = 44, pitch = -11),
+		camera = glc.camera_create(pos = {-3, 1, -2}, yaw = 44, pitch = -11),
 		is_capturing_mouse = false,
-		show_ui            = true,
+		show_ui = true,
+		light = {ambient = 1.0, diffuse = 1.0, specular = 1.0},
 	}
 
 	gl_ctx: sdl.GLContext
@@ -179,10 +187,6 @@ main :: proc() {
 			100.0,
 		)
 
-		light_color := glm.vec3(1)
-		diffuse_color := light_color * glm.vec3(0.5)
-		ambient_color := diffuse_color * glm.vec3(0.2)
-
 		// container
 		glc.shader_use_program(lighting_shader)
 		glc.shader_uniform_set(lighting_shader, "model", &container_model)
@@ -190,9 +194,9 @@ main :: proc() {
 		glc.shader_uniform_set(lighting_shader, "projection", &proj)
 		glc.shader_uniform_set(lighting_shader, "lightPos", light_pos)
 		glc.shader_uniform_set(lighting_shader, "viewPos", g_state.camera.position)
-		glc.shader_uniform_set(lighting_shader, "light.ambient", ambient_color)
-		glc.shader_uniform_set(lighting_shader, "light.diffuse", diffuse_color)
-		glc.shader_uniform_set(lighting_shader, "light.specular", 1.0, 1.0, 1.0)
+		glc.shader_uniform_set(lighting_shader, "light.ambient", g_state.light.ambient)
+		glc.shader_uniform_set(lighting_shader, "light.diffuse", g_state.light.diffuse)
+		glc.shader_uniform_set(lighting_shader, "light.specular", g_state.light.specular)
 		glc.shader_uniform_set(lighting_shader, "material.diffuse", 0) // set the sampler
 		glc.shader_uniform_set(lighting_shader, "material.specular", 1) // set the sampler
 		glc.shader_uniform_set(lighting_shader, "material.shininess", 32.0)
@@ -221,6 +225,10 @@ main :: proc() {
 
 ui_render :: proc() {
 	glc.camera_dev_ui_frame(&g_state.camera)
+
+	im.SliderFloat3("Light ambient", &g_state.light.ambient, 0.0, 1.0)
+	im.SliderFloat3("Light diffuse", &g_state.light.diffuse, 0.0, 1.0)
+	im.SliderFloat3("Light specular", &g_state.light.specular, 0.0, 1.0)
 }
 
 ui_render_shortcuts :: proc() {
