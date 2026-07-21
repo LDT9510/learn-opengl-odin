@@ -8,11 +8,37 @@ import "core:sys/windows"
 import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 
+import im "extern:imgui"
 import "lib:devui"
 import glc "lib:glcore"
 
 // avoids unused import error when ODIN_DEBUG is 0
 _ :: mem
+
+Directional_Light :: struct {
+	direction: glm.vec3,
+}
+
+Point_Light :: struct {
+	position:  glm.vec3,
+	constant:  f32,
+	linear:    f32,
+	quadratic: f32,
+}
+
+Spot_Light :: struct {
+	constant:           f32,
+	linear:             f32,
+	quadratic:          f32,
+	cutoff_angle:       f32,
+	outer_cutoff_angle: f32,
+}
+
+Light_Type :: enum {
+	Directional,
+	Point,
+	Spot,
+}
 
 State :: struct {
 	use_wireframe:        bool,
@@ -21,6 +47,10 @@ State :: struct {
 	window:               ^sdl.Window,
 	is_capturing_mouse:   bool,
 	show_ui:              bool,
+	light_type:           Light_Type,
+	directional_light:    Directional_Light,
+	point_light:          Point_Light,
+	spot_light:           Spot_Light,
 }
 g_state: State
 
@@ -108,9 +138,24 @@ main :: proc() {
 
 	// intial state
 	g_state = {
-		camera             = glc.camera_create(pos = {-6, -0.5, 7}, yaw = 315, pitch = 0),
+		camera = glc.camera_create(pos = {-6, -0.5, 7}, yaw = 315, pitch = 0),
 		is_capturing_mouse = false,
-		show_ui            = false,
+		show_ui = true,
+		light_type = .Spot,
+		directional_light = {direction = {-0.2, -1.0, -0.3}},
+		point_light = {
+			position = {1.2, 1.0, 2.0},
+			constant = 1.0,
+			linear = 0.09,
+			quadratic = 0.032,
+		},
+		spot_light = {
+			cutoff_angle = glm.radians_f32(12.5),
+			outer_cutoff_angle = glm.radians_f32(17.5),
+			constant = 1.0,
+			linear = 0.09,
+			quadratic = 0.032,
+		},
 	}
 
 	gl_ctx: sdl.GLContext
@@ -120,9 +165,21 @@ main :: proc() {
 	devui.init_for_sdl_window(g_state.window, gl_ctx)
 	defer devui.destroy()
 
-	lighting_shader :=
-		glc.shader_load_from_files("main") or_else glc.crash("Error loading shaders")
-	defer glc.shader_delete_program(lighting_shader)
+	directional_light_shader :=
+		glc.shader_load_from_files("main", "directional_light") or_else glc.crash(
+			"Error loading shaders",
+		)
+	defer glc.shader_delete_program(directional_light_shader)
+
+	point_light_shader :=
+		glc.shader_load_from_files("main", "point_light") or_else glc.crash(
+			"Error loading shaders",
+		)
+	defer glc.shader_delete_program(point_light_shader)
+
+	spot_light_shader :=
+		glc.shader_load_from_files("main", "spot_light") or_else glc.crash("Error loading shaders")
+	defer glc.shader_delete_program(spot_light_shader)
 
 	light_cube_shader :=
 		glc.shader_load_from_files("light_cube") or_else glc.crash("Error loading shaders")
@@ -168,11 +225,9 @@ main :: proc() {
 
 	gl.Enable(gl.DEPTH_TEST)
 
-	light_pos := glm.vec3{1.2, 1.0, 2.0}
-	light_cube_model := glm.mat4Translate(light_pos)
-	light_cube_model *= glm.mat4Scale(0.2)
-
 	free_all(context.allocator)
+
+	current_shader: glc.Shader_Program_Handle
 
 	for !g_state.program_should_close {
 		glc.events_handle(process_events, process_key_input)
@@ -191,47 +246,82 @@ main :: proc() {
 			100.0,
 		)
 
-		glc.shader_use_program(lighting_shader)
-		glc.shader_uniform_set(lighting_shader, "view", &view)
-		glc.shader_uniform_set(lighting_shader, "projection", &proj)
-		glc.shader_uniform_set(lighting_shader, "viewPos", g_state.camera.position)
-		glc.shader_uniform_set(lighting_shader, "material.diffuse", 0) // set the sampler
-		glc.texture_bind(diffuse_map, gl.TEXTURE0)
-		glc.shader_uniform_set(lighting_shader, "material.specular", 1) // set the sampler
-		glc.texture_bind(specular_map, gl.TEXTURE1)
-		glc.shader_uniform_set(lighting_shader, "material.shininess", 32.0)
-		glc.shader_uniform_set(lighting_shader, "light.ambient", 0.2, 0.2, 0.2)
-		glc.shader_uniform_set(lighting_shader, "light.diffuse", 0.5, 0.5, 0.5)
-		glc.shader_uniform_set(lighting_shader, "light.specular", 1.0, 1.0, 1.0)
+		switch g_state.light_type {
+		case .Directional:
+			current_shader = directional_light_shader
+		case .Point:
+			current_shader = point_light_shader
+		case .Spot:
+			current_shader = spot_light_shader
+		}
 
-		glc.shader_uniform_set(lighting_shader, "light.position", g_state.camera.position)
-		glc.shader_uniform_set(lighting_shader, "light.direction", g_state.camera.front)
-		glc.shader_uniform_set(lighting_shader, "light.constant", 1.0)
-		glc.shader_uniform_set(lighting_shader, "light.linear", 0.09)
-		glc.shader_uniform_set(lighting_shader, "light.quadratic", 0.032)
-		glc.shader_uniform_set(lighting_shader, "light.cutoff", glm.cos(glm.radians_f32(12.5)))
-		glc.shader_uniform_set(
-			lighting_shader,
-			"light.outer_cutoff",
-			glm.cos(glm.radians_f32(17.5)),
-		)
+		glc.shader_use_program(current_shader)
+		glc.shader_uniform_set(current_shader, "view", &view)
+		glc.shader_uniform_set(current_shader, "projection", &proj)
+		glc.shader_uniform_set(current_shader, "viewPos", g_state.camera.position)
+		glc.shader_uniform_set(current_shader, "material.diffuse", 0) // set the sampler
+		glc.texture_bind(diffuse_map, gl.TEXTURE0)
+		glc.shader_uniform_set(current_shader, "material.specular", 1) // set the sampler
+		glc.texture_bind(specular_map, gl.TEXTURE1)
+		glc.shader_uniform_set(current_shader, "material.shininess", 32.0)
+		glc.shader_uniform_set(current_shader, "light.ambient", 0.2, 0.2, 0.2)
+		glc.shader_uniform_set(current_shader, "light.diffuse", 0.5, 0.5, 0.5)
+		glc.shader_uniform_set(current_shader, "light.specular", 1.0, 1.0, 1.0)
+
+		switch g_state.light_type {
+		case .Directional:
+			glc.shader_uniform_set(
+				current_shader,
+				"light.direction",
+				g_state.directional_light.direction,
+			)
+		case .Point:
+			glc.shader_uniform_set(current_shader, "light.position", g_state.point_light.position)
+			glc.shader_uniform_set(current_shader, "light.constant", g_state.point_light.constant)
+			glc.shader_uniform_set(current_shader, "light.linear", g_state.point_light.linear)
+			glc.shader_uniform_set(
+				current_shader,
+				"light.quadratic",
+				g_state.point_light.quadratic,
+			)
+		case .Spot:
+			glc.shader_uniform_set(current_shader, "light.position", g_state.camera.position)
+			glc.shader_uniform_set(current_shader, "light.direction", g_state.camera.front)
+			glc.shader_uniform_set(current_shader, "light.constant", g_state.spot_light.constant)
+			glc.shader_uniform_set(current_shader, "light.linear", g_state.spot_light.linear)
+			glc.shader_uniform_set(current_shader, "light.quadratic", g_state.spot_light.quadratic)
+			glc.shader_uniform_set(
+				current_shader,
+				"light.cutoff",
+				glm.cos(g_state.spot_light.cutoff_angle),
+			)
+			glc.shader_uniform_set(
+				current_shader,
+				"light.outer_cutoff",
+				glm.cos(g_state.spot_light.outer_cutoff_angle),
+			)
+		}
 
 		for i in 0 ..< 10 {
 			model := glm.mat4(1)
 			model *= glm.mat4Translate(CUBE_POSITIONS[i])
 			angle := f32(20.0) * 1
 			model *= glm.mat4Rotate({1.0, 0.3, 0.5}, glm.radians_f32(angle))
-			glc.shader_uniform_set(lighting_shader, "model", &model)
+			glc.shader_uniform_set(current_shader, "model", &model)
 			gl.BindVertexArray(vao)
 			gl.DrawArrays(gl.TRIANGLES, 0, 36)
 		}
 
-		glc.shader_use_program(light_cube_shader)
-		glc.shader_uniform_set(light_cube_shader, "model", &light_cube_model)
-		glc.shader_uniform_set(light_cube_shader, "view", &view)
-		glc.shader_uniform_set(light_cube_shader, "projection", &proj)
-		gl.BindVertexArray(light_vao)
-		gl.DrawArrays(gl.TRIANGLES, 0, 36)
+		if (g_state.light_type == .Point) {
+			light_cube_model := glm.mat4Translate(g_state.point_light.position)
+			light_cube_model *= glm.mat4Scale(0.2)
+			glc.shader_use_program(light_cube_shader)
+			glc.shader_uniform_set(light_cube_shader, "model", &light_cube_model)
+			glc.shader_uniform_set(light_cube_shader, "view", &view)
+			glc.shader_uniform_set(light_cube_shader, "projection", &proj)
+			gl.BindVertexArray(light_vao)
+			gl.DrawArrays(gl.TRIANGLES, 0, 36)
+		}
 
 		if (g_state.show_ui) {
 			devui.render_ui("Learning OpenGL", ui_render, ui_render_shortcuts)
@@ -245,6 +335,29 @@ main :: proc() {
 
 ui_render :: proc() {
 	glc.camera_dev_ui_frame(&g_state.camera)
+
+	if (im.CollapsingHeader("Light", {.DefaultOpen})) {
+		light_type_int := cast(i32)g_state.light_type
+		if (im.Combo("Light Type", &light_type_int, "Directional\x00Point\x00Spot\x00")) {
+			g_state.light_type = cast(Light_Type)light_type_int
+		}
+
+		switch g_state.light_type {
+		case .Directional:
+			im.SliderFloat3("Direction", &g_state.directional_light.direction, -4.0, 4.0)
+		case .Point:
+			im.SliderFloat3("Position", &g_state.point_light.position, -4.0, 4.0)
+			im.SliderFloat("Constant term", &g_state.point_light.constant, 0.1, 1.0)
+			im.SliderFloat("Linear term", &g_state.point_light.linear, 0.01, 1.0)
+			im.SliderFloat("Quadratic term", &g_state.point_light.quadratic, 0.001, 1.0)
+		case .Spot:
+			im.SliderAngle("Cutoff Angle", &g_state.spot_light.cutoff_angle, 12.5, 17.4)
+			im.SliderAngle("Outer Cutoff Angle", &g_state.spot_light.outer_cutoff_angle, 17.5, 25.5)
+			im.SliderFloat("Constant term", &g_state.spot_light.constant, 0.1, 1.0)
+			im.SliderFloat("Linear term", &g_state.spot_light.linear, 0.01, 1.0)
+			im.SliderFloat("Quadratic term", &g_state.spot_light.quadratic, 0.001, 1.0)
+		}
+	}
 }
 
 ui_render_shortcuts :: proc() {
