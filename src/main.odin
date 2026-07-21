@@ -202,7 +202,10 @@ main :: proc() {
 			glc.shader_uniform_set(lighting_shader, "view", &view)
 			glc.shader_uniform_set(lighting_shader, "projection", &proj)
 			glc.shader_uniform_set(lighting_shader, "viewPos", g_state.camera.position)
-			glc.shader_uniform_set(lighting_shader, "light.position", light_pos)
+			glc.shader_uniform_set(lighting_shader, "light.position", g_state.camera.position)
+			glc.shader_uniform_set(lighting_shader, "light.direction", g_state.camera.front)
+			glc.shader_uniform_set(lighting_shader, "light.cutoff", glm.cos(glm.radians_f32(12.5)))
+			glc.shader_uniform_set(lighting_shader, "light.outer_cutoff", glm.cos(glm.radians_f32(17.5)))
 			glc.shader_uniform_set(lighting_shader, "light.ambient", 0.2, 0.2, 0.2)
 			glc.shader_uniform_set(lighting_shader, "light.diffuse", 0.5, 0.5, 0.5)
 			glc.shader_uniform_set(lighting_shader, "light.specular", 1.0, 1.0, 1.0)
@@ -219,7 +222,7 @@ main :: proc() {
 		}
 		
 		glc.shader_use_program(light_cube_shader)
-		glc.shader_uniform_set(light_cube_shader, "model", &light_cube_model)
+			glc.shader_uniform_set(light_cube_shader, "model", &light_cube_model)
 		glc.shader_uniform_set(light_cube_shader, "view", &view)
 		glc.shader_uniform_set(light_cube_shader, "projection", &proj)
 		gl.BindVertexArray(light_vao)
