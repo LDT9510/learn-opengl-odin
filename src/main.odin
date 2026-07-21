@@ -108,9 +108,9 @@ main :: proc() {
 
 	// intial state
 	g_state = {
-		camera             = glc.camera_create(pos = {-3, 1, -2}, yaw = 44, pitch = -11),
+		camera             = glc.camera_create(pos = {-6, -0.5, 7}, yaw = 315, pitch = 0),
 		is_capturing_mouse = false,
-		show_ui            = true,
+		show_ui            = false,
 	}
 
 	gl_ctx: sdl.GLContext
@@ -168,10 +168,9 @@ main :: proc() {
 
 	gl.Enable(gl.DEPTH_TEST)
 
-
-	// light_pos := glm.vec3{1.2, 1.0, 2.0}
-	// light_cube_model := glm.mat4Translate(light_pos)
-	// light_cube_model *= glm.mat4Scale(0.2)
+	light_pos := glm.vec3{1.2, 1.0, 2.0}
+	light_cube_model := glm.mat4Translate(light_pos)
+	light_cube_model *= glm.mat4Scale(0.2)
 
 	free_all(context.allocator)
 
@@ -181,7 +180,7 @@ main :: proc() {
 
 		gl.PolygonMode(gl.FRONT_AND_BACK, g_state.use_wireframe ? gl.LINE : gl.FILL)
 
-		gl.ClearColor(0.0, 0.0, 0.0, 1.0)
+		gl.ClearColor(0.1, 0.1, 0.1, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
 		view := glc.camera_get_view_matrix(g_state.camera)
@@ -191,10 +190,6 @@ main :: proc() {
 			0.1,
 			100.0,
 		)
-
-		light_color := glm.vec3(1)
-		diffuse_color := light_color * glm.vec3(0.5)
-		ambient_color := diffuse_color * glm.vec3(0.2)
 
 		// container
 		for i in 0 ..< 10 {
@@ -206,12 +201,14 @@ main :: proc() {
 			glc.shader_uniform_set(lighting_shader, "model", &model)
 			glc.shader_uniform_set(lighting_shader, "view", &view)
 			glc.shader_uniform_set(lighting_shader, "projection", &proj)
-			// glc.shader_uniform_set(lighting_shader, "lightPos", light_pos)
 			glc.shader_uniform_set(lighting_shader, "viewPos", g_state.camera.position)
-			glc.shader_uniform_set(lighting_shader, "light.direction", -0.2, -1.0, -0.3)
-			glc.shader_uniform_set(lighting_shader, "light.ambient", ambient_color)
-			glc.shader_uniform_set(lighting_shader, "light.diffuse", diffuse_color)
+			glc.shader_uniform_set(lighting_shader, "light.position", light_pos)
+			glc.shader_uniform_set(lighting_shader, "light.ambient", 0.2, 0.2, 0.2)
+			glc.shader_uniform_set(lighting_shader, "light.diffuse", 0.5, 0.5, 0.5)
 			glc.shader_uniform_set(lighting_shader, "light.specular", 1.0, 1.0, 1.0)
+			glc.shader_uniform_set(lighting_shader, "light.constant", 1.0)
+			glc.shader_uniform_set(lighting_shader, "light.linear", 0.09)
+			glc.shader_uniform_set(lighting_shader, "light.quadratic",0.032)
 			glc.shader_uniform_set(lighting_shader, "material.diffuse", 0) // set the sampler
 			glc.shader_uniform_set(lighting_shader, "material.specular", 1) // set the sampler
 			glc.shader_uniform_set(lighting_shader, "material.shininess", 32.0)
@@ -220,14 +217,13 @@ main :: proc() {
 			gl.BindVertexArray(vao)
 			gl.DrawArrays(gl.TRIANGLES, 0, 36)
 		}
-
-		// light
-		// glc.shader_use_program(light_cube_shader)
-		// glc.shader_uniform_set(light_cube_shader, "model", &light_cube_model)
-		// glc.shader_uniform_set(light_cube_shader, "view", &view)
-		// glc.shader_uniform_set(light_cube_shader, "projection", &proj)
-		// gl.BindVertexArray(light_vao)
-		// gl.DrawArrays(gl.TRIANGLES, 0, 36)
+		
+		glc.shader_use_program(light_cube_shader)
+		glc.shader_uniform_set(light_cube_shader, "model", &light_cube_model)
+		glc.shader_uniform_set(light_cube_shader, "view", &view)
+		glc.shader_uniform_set(light_cube_shader, "projection", &proj)
+		gl.BindVertexArray(light_vao)
+		gl.DrawArrays(gl.TRIANGLES, 0, 36)
 
 		if (g_state.show_ui) {
 			devui.render_ui("Learning OpenGL", ui_render, ui_render_shortcuts)
