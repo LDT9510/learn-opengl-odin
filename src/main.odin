@@ -70,6 +70,20 @@ CUBE_VERTICES := [?]f32 {
     -0.5,  0.5,  0.5,  0.0,  1.0,  0.0,  0.0, 0.0,
     -0.5,  0.5, -0.5,  0.0,  1.0,  0.0,  0.0, 1.0,
 }
+
+@(rodata)
+CUBE_POSITIONS := [?]glm.vec3 {
+	{ 0.0,  0.0,  0.0},
+	{ 2.0,  5.0, -15.0},
+    {-1.5, -2.2, -2.5},
+    {-3.8, -2.0, -12.3},
+    { 2.4, -0.4, -3.5},
+    {-1.7,  3.0, -7.5},
+    { 1.3, -2.0, -2.5},
+    { 1.5,  2.0, -2.5},
+    { 1.5,  0.2, -1.5},
+    {-1.3,  1.0, -1.5},
+}
 // odinfmt: enable
 
 main :: proc() {
@@ -154,11 +168,10 @@ main :: proc() {
 
 	gl.Enable(gl.DEPTH_TEST)
 
-	container_model := glm.mat4(1)
 
-	light_pos := glm.vec3{1.2, 1.0, 2.0}
-	light_cube_model := glm.mat4Translate(light_pos)
-	light_cube_model *= glm.mat4Scale(0.2)
+	// light_pos := glm.vec3{1.2, 1.0, 2.0}
+	// light_cube_model := glm.mat4Translate(light_pos)
+	// light_cube_model *= glm.mat4Scale(0.2)
 
 	free_all(context.allocator)
 
@@ -184,30 +197,37 @@ main :: proc() {
 		ambient_color := diffuse_color * glm.vec3(0.2)
 
 		// container
-		glc.shader_use_program(lighting_shader)
-		glc.shader_uniform_set(lighting_shader, "model", &container_model)
-		glc.shader_uniform_set(lighting_shader, "view", &view)
-		glc.shader_uniform_set(lighting_shader, "projection", &proj)
-		glc.shader_uniform_set(lighting_shader, "lightPos", light_pos)
-		glc.shader_uniform_set(lighting_shader, "viewPos", g_state.camera.position)
-		glc.shader_uniform_set(lighting_shader, "light.ambient", ambient_color)
-		glc.shader_uniform_set(lighting_shader, "light.diffuse", diffuse_color)
-		glc.shader_uniform_set(lighting_shader, "light.specular", 1.0, 1.0, 1.0)
-		glc.shader_uniform_set(lighting_shader, "material.diffuse", 0) // set the sampler
-		glc.shader_uniform_set(lighting_shader, "material.specular", 1) // set the sampler
-		glc.shader_uniform_set(lighting_shader, "material.shininess", 32.0)
-		glc.texture_bind(diffuse_map, gl.TEXTURE0)
-		glc.texture_bind(specular_map, gl.TEXTURE1)
-		gl.BindVertexArray(vao)
-		gl.DrawArrays(gl.TRIANGLES, 0, 36)
+		for i in 0 ..< 10 {
+			model := glm.mat4(1)
+			model *= glm.mat4Translate(CUBE_POSITIONS[i])
+			angle := f32(20.0) * 1
+			model *= glm.mat4Rotate({1.0, 0.3, 0.5}, glm.radians_f32(angle))
+			glc.shader_use_program(lighting_shader)
+			glc.shader_uniform_set(lighting_shader, "model", &model)
+			glc.shader_uniform_set(lighting_shader, "view", &view)
+			glc.shader_uniform_set(lighting_shader, "projection", &proj)
+			// glc.shader_uniform_set(lighting_shader, "lightPos", light_pos)
+			glc.shader_uniform_set(lighting_shader, "viewPos", g_state.camera.position)
+			glc.shader_uniform_set(lighting_shader, "light.direction", -0.2, -1.0, -0.3)
+			glc.shader_uniform_set(lighting_shader, "light.ambient", ambient_color)
+			glc.shader_uniform_set(lighting_shader, "light.diffuse", diffuse_color)
+			glc.shader_uniform_set(lighting_shader, "light.specular", 1.0, 1.0, 1.0)
+			glc.shader_uniform_set(lighting_shader, "material.diffuse", 0) // set the sampler
+			glc.shader_uniform_set(lighting_shader, "material.specular", 1) // set the sampler
+			glc.shader_uniform_set(lighting_shader, "material.shininess", 32.0)
+			glc.texture_bind(diffuse_map, gl.TEXTURE0)
+			glc.texture_bind(specular_map, gl.TEXTURE1)
+			gl.BindVertexArray(vao)
+			gl.DrawArrays(gl.TRIANGLES, 0, 36)
+		}
 
 		// light
-		glc.shader_use_program(light_cube_shader)
-		glc.shader_uniform_set(light_cube_shader, "model", &light_cube_model)
-		glc.shader_uniform_set(light_cube_shader, "view", &view)
-		glc.shader_uniform_set(light_cube_shader, "projection", &proj)
-		gl.BindVertexArray(light_vao)
-		gl.DrawArrays(gl.TRIANGLES, 0, 36)
+		// glc.shader_use_program(light_cube_shader)
+		// glc.shader_uniform_set(light_cube_shader, "model", &light_cube_model)
+		// glc.shader_uniform_set(light_cube_shader, "view", &view)
+		// glc.shader_uniform_set(light_cube_shader, "projection", &proj)
+		// gl.BindVertexArray(light_vao)
+		// gl.DrawArrays(gl.TRIANGLES, 0, 36)
 
 		if (g_state.show_ui) {
 			devui.render_ui("Learning OpenGL", ui_render, ui_render_shortcuts)

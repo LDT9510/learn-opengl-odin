@@ -9,7 +9,9 @@ uniform vec3 lightPos;
 uniform vec3 viewPos;
 
 struct Light {
-    vec3 position;
+    // not required for directional light
+    // vec3 position;
+    vec3 direction;
 
     vec3 ambient;
     vec3 diffuse;
@@ -34,7 +36,7 @@ void main()
     vec3 ambient = light.ambient * sampled_diffuse;
 
     // diffuse component
-    vec3 light_dir = normalize(lightPos - FragPos);
+    vec3 light_dir = normalize(-light.direction);
     float diffuse_contrib = max(dot(norm, light_dir), 0.0);
     vec3 diffuse = light.diffuse * (diffuse_contrib * sampled_diffuse);
 
