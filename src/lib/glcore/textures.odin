@@ -34,11 +34,6 @@ texture_load :: proc(image_name: string) -> (texture_id: Texture_Id, ok: bool) {
 	return cast(Texture_Id)tex_id, true
 }
 
-texture_bind :: proc(texture_id: Texture_Id, texture_slot: u32) {
-	gl.ActiveTexture(texture_slot)
-	gl.BindTexture(gl.TEXTURE_2D, cast(u32)texture_id)
-}
-
 texture_destroy :: proc(texture_id: Texture_Id) {
 	texture_id := cast(u32)texture_id
 	gl.DeleteTextures(1, &texture_id)

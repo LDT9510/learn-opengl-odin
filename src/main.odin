@@ -100,8 +100,6 @@ main :: proc() {
 		context.allocator = mem.tracking_allocator(&tracking_allocator)
 		defer glc.reset_tracking_allocator()
 		log.info("Debug mode")
-	} else {
-		context.allocator = context.temp_allocator
 	}
 
 	glc.print_sdl_version()
@@ -171,8 +169,6 @@ main :: proc() {
 	light_pos := glm.vec3{1.2, 1.0, 2.0}
 	light_cube_model := glm.mat4Translate(light_pos)
 	light_cube_model *= glm.mat4Scale(0.2)
-
-	free_all(context.allocator)
 
 	for !g_state.program_should_close {
 		glc.events_handle(process_events, process_key_input)
@@ -257,8 +253,6 @@ main :: proc() {
 		}
 
 		sdl.GL_SwapWindow(g_state.window)
-
-		free_all(context.allocator)
 	}
 }
 

@@ -108,7 +108,9 @@ main :: proc() {
 	defer devui.destroy()
 
 	lighting_shader :=
-		glc.shader_load_from_files("main", "emission_mapping") or_else glc.crash("Error loading shaders")
+		glc.shader_load_from_files("main", "emission_mapping") or_else glc.crash(
+			"Error loading shaders",
+		)
 	defer glc.shader_delete_program(lighting_shader)
 
 	light_cube_shader :=
@@ -196,13 +198,10 @@ main :: proc() {
 		glc.shader_uniform_set(lighting_shader, "light.ambient", ambient_color)
 		glc.shader_uniform_set(lighting_shader, "light.diffuse", diffuse_color)
 		glc.shader_uniform_set(lighting_shader, "light.specular", 1.0, 1.0, 1.0)
-		glc.shader_uniform_set(lighting_shader, "material.diffuse", 0) // set the sampler
-		glc.shader_uniform_set(lighting_shader, "material.specular", 1) // set the sampler
-		glc.shader_uniform_set(lighting_shader, "material.emission", 2) // set the sampler
+		glc.shader_texture_sampler_set(lighting_shader, "material.diffuse", diffuse_map, 0)
+		glc.shader_texture_sampler_set(lighting_shader, "material.specular", specular_map, 1)
+		glc.shader_texture_sampler_set(lighting_shader, "material.emission", emission_map, 2)
 		glc.shader_uniform_set(lighting_shader, "material.shininess", 32.0)
-		glc.texture_bind(diffuse_map, gl.TEXTURE0)
-		glc.texture_bind(specular_map, gl.TEXTURE1)
-		glc.texture_bind(emission_map, gl.TEXTURE2)
 		gl.BindVertexArray(vao)
 		gl.DrawArrays(gl.TRIANGLES, 0, 36)
 

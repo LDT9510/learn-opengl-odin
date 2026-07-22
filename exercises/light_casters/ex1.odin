@@ -259,10 +259,8 @@ main :: proc() {
 		glc.shader_uniform_set(current_shader, "view", &view)
 		glc.shader_uniform_set(current_shader, "projection", &proj)
 		glc.shader_uniform_set(current_shader, "viewPos", g_state.camera.position)
-		glc.shader_uniform_set(current_shader, "material.diffuse", 0) // set the sampler
-		glc.texture_bind(diffuse_map, gl.TEXTURE0)
-		glc.shader_uniform_set(current_shader, "material.specular", 1) // set the sampler
-		glc.texture_bind(specular_map, gl.TEXTURE1)
+		glc.shader_texture_sampler_set(current_shader, "u_material.diffuse", diffuse_map, 0)
+		glc.shader_texture_sampler_set(current_shader, "u_material.specular", specular_map, 1)
 		glc.shader_uniform_set(current_shader, "material.shininess", 32.0)
 		glc.shader_uniform_set(current_shader, "light.ambient", 0.2, 0.2, 0.2)
 		glc.shader_uniform_set(current_shader, "light.diffuse", 0.5, 0.5, 0.5)
