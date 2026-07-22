@@ -221,15 +221,34 @@ main :: proc() {
 			model *= glm.mat4Translate(CUBE_POSITIONS[i])
 			angle := f32(20.0) * 1
 			model *= glm.mat4Rotate({1.0, 0.3, 0.5}, glm.radians_f32(angle))
-			glc.shader_uniform_set(lighting_shader, "model", &model)
+			glc.shader_use_program(lighting_shader)
+			glc.shader_uniform_set(lighting_shader, "u_model", &model)
+			glc.shader_uniform_set(lighting_shader, "u_view", &view)
+			glc.shader_uniform_set(lighting_shader, "u_projection", &proj)
+			glc.shader_uniform_set(lighting_shader, "u_viewPos", g_state.camera.position)
+			glc.shader_uniform_set(lighting_shader, "u_light.position", g_state.camera.position)
+			glc.shader_uniform_set(lighting_shader, "u_light.direction", g_state.camera.front)
+			glc.shader_uniform_set(lighting_shader, "u_light.cutoff", glm.cos(glm.radians_f32(12.5)))
+			glc.shader_uniform_set(lighting_shader, "u_light.outer_cutoff", glm.cos(glm.radians_f32(17.5)))
+			glc.shader_uniform_set(lighting_shader, "u_light.ambient", 0.2, 0.2, 0.2)
+			glc.shader_uniform_set(lighting_shader, "u_light.diffuse", 0.5, 0.5, 0.5)
+			glc.shader_uniform_set(lighting_shader, "u_light.specular", 1.0, 1.0, 1.0)
+			glc.shader_uniform_set(lighting_shader, "u_light.constant", 1.0)
+			glc.shader_uniform_set(lighting_shader, "u_light.linear", 0.09)
+			glc.shader_uniform_set(lighting_shader, "u_light.quadratic",0.032)
+			glc.shader_uniform_set(lighting_shader, "u_material.diffuse", 0) // set the sampler
+			glc.shader_uniform_set(lighting_shader, "u_material.specular", 1) // set the sampler
+			glc.shader_uniform_set(lighting_shader, "u_material.shininess", 32.0)
+			glc.texture_bind(diffuse_map, gl.TEXTURE0)
+			glc.texture_bind(specular_map, gl.TEXTURE1)
 			gl.BindVertexArray(vao)
 			gl.DrawArrays(gl.TRIANGLES, 0, 36)
 		}
 
 		glc.shader_use_program(light_cube_shader)
-		glc.shader_uniform_set(light_cube_shader, "model", &light_cube_model)
-		glc.shader_uniform_set(light_cube_shader, "view", &view)
-		glc.shader_uniform_set(light_cube_shader, "projection", &proj)
+			glc.shader_uniform_set(light_cube_shader, "u_model", &light_cube_model)
+		glc.shader_uniform_set(light_cube_shader, "u_view", &view)
+		glc.shader_uniform_set(light_cube_shader, "u_projection", &proj)
 		gl.BindVertexArray(light_vao)
 		gl.DrawArrays(gl.TRIANGLES, 0, 36)
 
