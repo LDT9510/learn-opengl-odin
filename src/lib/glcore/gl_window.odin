@@ -2,6 +2,7 @@ package glcore
 
 import "core:c"
 import "core:log"
+
 import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 

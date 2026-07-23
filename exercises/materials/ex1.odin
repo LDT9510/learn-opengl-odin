@@ -81,10 +81,14 @@ main :: proc() {
 	context.logger = cl
 
 	when ODIN_DEBUG {
-		tracking_allocator: mem.Tracking_Allocator
-		mem.tracking_allocator_init(&tracking_allocator, context.allocator)
-		context.allocator = mem.tracking_allocator(&tracking_allocator)
-		defer glc.reset_tracking_allocator()
+		tracking_allocator := glc.create_tracking_allocator(context.allocator)
+		defer glc.destroy_tracking_allocator(tracking_allocator)
+		context.allocator = tracking_allocator
+
+		tracking_temp_allocator := glc.create_tracking_allocator(context.temp_allocator)
+		defer glc.destroy_tracking_allocator(tracking_temp_allocator, temp = true)
+		context.temp_allocator = tracking_temp_allocator
+
 		log.info("Debug mode")
 	}
 
@@ -109,7 +113,9 @@ main :: proc() {
 	defer glc.shader_delete_program(lighting_shader)
 
 	light_cube_shader :=
-		glc.shader_load_from_files("light_cube", "light_cube_changing") or_else glc.crash("Error loading shaders")
+		glc.shader_load_from_files("light_cube", "light_cube_changing") or_else glc.crash(
+			"Error loading shaders",
+		)
 	defer glc.shader_delete_program(light_cube_shader)
 
 	vbo, vao, light_vao: u32

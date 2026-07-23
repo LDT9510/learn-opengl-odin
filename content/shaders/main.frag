@@ -1,4 +1,7 @@
 #version 330 core
+
+#define MAX_POINT_LIGHTS 4
+
 out vec4 out_frag_color;
 
 in vec3 v_frag_pos;
@@ -11,23 +14,37 @@ struct Material {
     float shininess;
 };
 
-// struct DirectionalLight {
-//     vec3 direction;
-//
-//     vec3 ambient;
-//     vec3 diffuse;
-//     vec3 specular;
-// }
-
-struct Light {
+struct DirectionalLight {
     vec3 direction;
+
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+};
+
+struct PointLight {
     vec3 position;
+
+    float constant;
+    float linear;
+    float quadratic;
+
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+};
+
+struct SpotLight {
+    vec3 position;
+    vec3 direction;
+
     float cutoff;
     float outer_cutoff;
 
     float constant;
     float linear;
     float quadratic;
+
     vec3 ambient;
     vec3 diffuse;
     vec3 specular;
@@ -35,56 +52,81 @@ struct Light {
 
 uniform vec3 u_view_pos;
 uniform Material u_material;
-uniform Light u_light;
+uniform DirectionalLight u_dir_light;
+uniform PointLight u_point_lights[MAX_POINT_LIGHTS];
+uniform SpotLight u_spot_light;
 
-float calc_attenuation(Light light, vec3 fragment_position);
-// vec3 calc_dir_light(DirectionalLight light, vec3 normal, vec3 view_dir);
+vec3 calc_directional_light(DirectionalLight light, vec3 normal, vec3 view_dir);
+vec3 calc_point_light(PointLight light, vec3 normal, vec3 frag_pos, vec3 view_dir);
+vec3 calc_spot_light(SpotLight light, vec3 normal, vec3 frag_pos, vec3 view_dir);
 
 void main()
 {
     vec3 norm = normalize(v_normal);
-    vec3 sampled_specular = vec3(texture(u_material.specular, v_tex_coords));
-    vec3 sampled_diffuse = vec3(texture(u_material.diffuse, v_tex_coords));
+    vec3 view_dir = normalize(u_view_pos - v_frag_pos);
 
-    // ambient component
-    vec3 ambient = u_light.ambient * sampled_diffuse;
+    vec3 result = calc_directional_light(u_dir_light, norm, view_dir);
 
-    // diffuse component
-    vec3 light_dir = normalize(u_light.position - v_frag_pos);
-    float diffuse_contrib = max(dot(norm, light_dir), 0.0);
-    vec3 diffuse = u_light.diffuse * diffuse_contrib * sampled_diffuse;
+    for (int i = 0; i < MAX_POINT_LIGHTS; i++) {
+        result += calc_point_light(u_point_lights[i], norm, v_frag_pos, view_dir);
+    }
 
-    // specular component
-    vec3 viewDir = normalize(u_view_pos - v_frag_pos);
-    vec3 reflectDir = reflect(-light_dir, norm);
-    float specular_contrib = pow(max(dot(viewDir, reflectDir), 0.0), u_material.shininess);
-    vec3 specular = u_light.specular * specular_contrib * sampled_specular;
-
-    // spotlight with soft edges
-    float theta = dot(light_dir, normalize(-u_light.direction));
-    float epsilon = (u_light.cutoff - u_light.outer_cutoff);
-    float intensity = clamp((theta - u_light.outer_cutoff) / epsilon, 0.0, 1.0);
-    diffuse *= intensity;
-    specular *= intensity;
-
-    // attenuation
-    float attenuation = calc_attenuation(u_light, v_frag_pos);
-    ambient *= attenuation;
-    diffuse *= attenuation;
-    specular *= attenuation;
-
-    vec3 result = ambient + diffuse + specular;
+    result += calc_spot_light(u_spot_light, norm, v_frag_pos, view_dir);
 
     out_frag_color = vec4(result, 1.0);
 }
 
-float calc_attenuation(Light light, vec3 fragment_position) {
-    float d = length(u_light.position - fragment_position);
-    float Kc = u_light.constant;
-    float Kl = u_light.linear;
-    float Kq = u_light.quadratic;
+vec3 calc_directional_light(DirectionalLight light, vec3 normal, vec3 view_dir) {
+    vec3 light_dir = normalize(-light.direction);
+    float diff = max(dot(normal, light_dir), 0.0);
+    vec3 reflect_dir = reflect(-light_dir, normal);
+    float spec = pow(max(dot(view_dir, reflect_dir), 0.0), u_material.shininess);
 
-    return 1.0 / (Kc + (Kl * d) + (Kq * (d * d)));
+    vec3 ambient = light.ambient * texture(u_material.diffuse, v_tex_coords).rgb;
+    vec3 diffuse = light.diffuse * diff * texture(u_material.diffuse, v_tex_coords).rgb;
+    vec3 specular = light.specular * spec * texture(u_material.specular, v_tex_coords).rgb;
+
+    return ambient + diffuse + specular;
 }
 
-// vec3 calc_u_dir_light(DirectionalLight light, vec3 normal, vec3 view_dir) {}
+vec3 calc_point_light(PointLight light, vec3 normal, vec3 frag_pos, vec3 view_dir) {
+    vec3 light_dir = normalize(light.position - frag_pos);
+    float diff = max(dot(normal, light_dir), 0.0);
+    vec3 reflect_dir = reflect(-light_dir, normal);
+    float spec = pow(max(dot(view_dir, reflect_dir), 0.0), u_material.shininess);
+
+    float d = length(light.position - frag_pos);
+    float Kc = light.constant;
+    float Kl = light.linear;
+    float Kq = light.quadratic;
+    float attenuation = 1.0 / (Kc + (Kl * d) + (Kq * (d * d)));
+
+    vec3 ambient = light.ambient * texture(u_material.diffuse, v_tex_coords).rgb * attenuation;
+    vec3 diffuse = light.diffuse * diff * texture(u_material.diffuse, v_tex_coords).rgb * attenuation;
+    vec3 specular = light.specular * spec * texture(u_material.specular, v_tex_coords).rgb * attenuation;
+
+    return ambient + diffuse + specular;
+}
+
+vec3 calc_spot_light(SpotLight light, vec3 normal, vec3 frag_pos, vec3 view_dir) {
+    vec3 light_dir = normalize(light.position - frag_pos);
+    float diff = max(dot(normal, light_dir), 0.0);
+    vec3 reflect_dir = reflect(-light_dir, normal);
+    float spec = pow(max(dot(view_dir, reflect_dir), 0.0), u_material.shininess);
+
+    float d = length(light.position - frag_pos);
+    float Kc = light.constant;
+    float Kl = light.linear;
+    float Kq = light.quadratic;
+    float attenuation = 1.0 / (Kc + (Kl * d) + (Kq * (d * d)));
+
+    float theta = dot(light_dir, normalize(-light.direction));
+    float epsilon = light.cutoff - light.outer_cutoff;
+    float intensity = clamp((theta - light.outer_cutoff) / epsilon, 0.0, 1.0);
+
+    vec3 ambient = light.ambient * texture(u_material.diffuse, v_tex_coords).rgb * attenuation;
+    vec3 diffuse = light.diffuse * diff * texture(u_material.diffuse, v_tex_coords).rgb * attenuation * intensity;
+    vec3 specular = light.specular * spec * texture(u_material.specular, v_tex_coords).rgb * attenuation * intensity;
+
+    return ambient + diffuse + specular;
+}

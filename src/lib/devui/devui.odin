@@ -1,7 +1,6 @@
 package devui
 
 import sdl "vendor:sdl3"
-
 import im "extern:imgui"
 import im_gl "extern:imgui/imgui_impl_opengl3"
 import im_sdl "extern:imgui/imgui_impl_sdl3"
@@ -13,11 +12,11 @@ init_for_sdl_window :: proc(window: ^sdl.Window, gl_context: sdl.GLContext) {
 	im_gl.Init()
 
 	io := im.GetIO()
-	io.ConfigFlags += { .DockingEnable }
+	io.ConfigFlags += {.DockingEnable}
 
 	im.FontAtlas_AddFontFromMemoryCompressedTTF(
 		io.Fonts,
-		&g_roboto_medium_compressed_data,
+		&ROBOTO_FONT_COMPRESSED_DATA,
 		ROBOT_MEDIUM_COMPRESSED_SIZE,
 		20.0,
 	)

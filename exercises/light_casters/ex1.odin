@@ -125,13 +125,15 @@ main :: proc() {
 	context.logger = cl
 
 	when ODIN_DEBUG {
-		tracking_allocator: mem.Tracking_Allocator
-		mem.tracking_allocator_init(&tracking_allocator, context.allocator)
-		context.allocator = mem.tracking_allocator(&tracking_allocator)
-		defer glc.reset_tracking_allocator()
+		tracking_allocator := glc.create_tracking_allocator(context.allocator)
+		defer glc.destroy_tracking_allocator(tracking_allocator)
+		context.allocator = tracking_allocator
+
+		tracking_temp_allocator := glc.create_tracking_allocator(context.temp_allocator)
+		defer glc.destroy_tracking_allocator(tracking_temp_allocator, temp = true)
+		context.temp_allocator = tracking_temp_allocator
+
 		log.info("Debug mode")
-	} else {
-		context.allocator = context.temp_allocator
 	}
 
 	glc.print_sdl_version()
@@ -350,7 +352,12 @@ ui_render :: proc() {
 			im.SliderFloat("Quadratic term", &g_state.point_light.quadratic, 0.001, 1.0)
 		case .Spot:
 			im.SliderAngle("Cutoff Angle", &g_state.spot_light.cutoff_angle, 12.5, 17.4)
-			im.SliderAngle("Outer Cutoff Angle", &g_state.spot_light.outer_cutoff_angle, 17.5, 25.5)
+			im.SliderAngle(
+				"Outer Cutoff Angle",
+				&g_state.spot_light.outer_cutoff_angle,
+				17.5,
+				25.5,
+			)
 			im.SliderFloat("Constant term", &g_state.spot_light.constant, 0.1, 1.0)
 			im.SliderFloat("Linear term", &g_state.spot_light.linear, 0.01, 1.0)
 			im.SliderFloat("Quadratic term", &g_state.spot_light.quadratic, 0.001, 1.0)

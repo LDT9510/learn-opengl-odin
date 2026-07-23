@@ -1,7 +1,7 @@
 package glcore
 
-@require import "core:image/png"
-@require import "core:image/jpeg"
+@(require) import "core:image/png"
+@(require) import "core:image/jpeg"
 import "core:image"
 import "core:log"
 import "core:os"

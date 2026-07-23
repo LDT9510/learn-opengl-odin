@@ -4,4 +4,3 @@
 *.dll
 *.cap
 **/.bin
-imgui.ini

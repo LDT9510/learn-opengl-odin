@@ -11,7 +11,7 @@ import sdl "vendor:sdl3"
 
 import glc "lib:glcore"
 
-_ :: glc.OPENGL_EXERCISES_PATH  // do not raise unused error
+_ :: glc.OPENGL_EXERCISES_PATH // do not raise unused error
 
 // odinfmt: disable
 WINDOW_WIDTH :: 800

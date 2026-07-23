@@ -3,7 +3,6 @@ package glcore
 import glm "core:math/linalg/glsl"
 
 import im "extern:imgui"
-import glc "lib:glcore"
 
 // odinfmt: disable
 CAMERA_DEFAULT_UP            :: glm.vec3{0.0, 1.0, 0.0}
@@ -61,22 +60,22 @@ camera_get_view_matrix :: proc(c: Camera) -> glm.mat4 {
 
 camera_handle_input :: proc(c: ^Camera) {
 	speed := c.movement_speed
-	if (glc.events_is_key_pressed(.LSHIFT)) {
+	if events_is_key_pressed(.LSHIFT) {
 		speed *= cast(f32)c.sprint_factor
 	}
 
-	velocity := speed * glc.g_delta_time
+	velocity := speed * g_delta_time
 
-	if glc.events_is_key_pressed(.W) {
+	if events_is_key_pressed(.W) {
 		c.position += c.front * velocity
 	}
-	if glc.events_is_key_pressed(.S) {
+	if events_is_key_pressed(.S) {
 		c.position -= c.front * velocity
 	}
-	if glc.events_is_key_pressed(.A) {
+	if events_is_key_pressed(.A) {
 		c.position -= c.right * velocity
 	}
-	if glc.events_is_key_pressed(.D) {
+	if events_is_key_pressed(.D) {
 		c.position += c.right * velocity
 	}
 }
@@ -85,7 +84,7 @@ camera_on_mouse_move :: proc(c: ^Camera, x, y: f32, constrain_pitch: bool) {
 	c.yaw += glm.radians(x * c.sensitivity)
 	c.pitch += glm.radians(y * c.sensitivity)
 
-	if (constrain_pitch) {
+	if constrain_pitch {
 		c.pitch = glm.clamp(c.pitch, glm.radians_f32(-89), glm.radians_f32(89))
 	}
 
@@ -98,11 +97,11 @@ camera_on_mouse_wheel_scroll :: proc(c: ^Camera, mouse_wheel_direction: f32) {
 }
 
 camera_dev_ui_frame :: proc(c: ^Camera) {
-	if (im.CollapsingHeader("Camera")) {
+	if im.CollapsingHeader("Camera") {
 		im.SliderFloat("FOV", &c.zoom, 10.0, 120.0, "%.0f deg")
 		im.SliderFloat("Speed", &c.movement_speed, 1.0, 50.0, "%.1f")
 		im.DragFloat3("Position", &c.position, 0.1)
-		
+
 		yaw_changed := im.SliderAngle("Yaw", &c.yaw)
 		pitch_changed := im.SliderAngle("Pitch", &c.pitch, -90.0, 90.0)
 		if yaw_changed || pitch_changed {

@@ -13,6 +13,7 @@ Shader_Type :: enum u32 {
 Shader_Handle :: distinct u32
 Shader_Program_Handle :: distinct u32
 
+
 shader_create :: proc(
 	code: Shader_Code,
 	type: Shader_Type,
@@ -108,7 +109,13 @@ shader_load_diff_name_files :: proc(
 }
 
 shader_use_program :: proc(program_id: Shader_Program_Handle) {
-	gl.UseProgram(cast(u32)program_id)
+	@(static) s_last_program_set: Shader_Program_Handle
+
+	// avoid calling GLUseProgram for nothing
+	if program_id != s_last_program_set {
+		gl.UseProgram(cast(u32)program_id)
+		s_last_program_set = program_id
+	}
 }
 
 shader_delete_program :: proc(program_id: Shader_Program_Handle) {
@@ -119,14 +126,10 @@ shader_texture_sampler_set :: proc(
 	program_id: Shader_Program_Handle,
 	name: cstring,
 	texture_id: Texture_Id,
-	index: i32,
+	unit: i32,
 ) {
-	@(static, rodata)
-	TEXTURE_UNITS := [?]u32{gl.TEXTURE0, gl.TEXTURE1, gl.TEXTURE2, gl.TEXTURE3}
-	texture_unit := TEXTURE_UNITS[index]
-
-	shader_uniform_set(program_id, name, index)
-	gl.ActiveTexture(texture_unit)
+	shader_uniform_set(program_id, name, unit)
+	gl.ActiveTexture(gl.TEXTURE0 + cast(u32)unit)
 	gl.BindTexture(gl.TEXTURE_2D, cast(u32)texture_id)
 
 }

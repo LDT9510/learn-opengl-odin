@@ -33,7 +33,7 @@ events_handle :: proc(
 	events_callback: ProcessEventsCallback,
 	key_input_callback: ProcessKeyInputCallback,
 ) {
-	if (!devui.wants_keyboard_input()) {
+	if !devui.wants_keyboard_input() {
 		num_keys: c.int
 		keyboard_state := sdl.GetKeyboardState(&num_keys)
 		mem.copy(&_g_previous_keyboard_state, keyboard_state, cast(int)num_keys)
@@ -49,7 +49,7 @@ events_handle :: proc(
 	for sdl.PollEvent(&e) {
 		devui.process_event(&e)
 
-		if (!devui.wants_mouse_input()) {
+		if !devui.wants_mouse_input() {
 			events_callback(e)
 		}
 	}
