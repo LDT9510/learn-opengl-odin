@@ -13,6 +13,8 @@ import sdl "vendor:sdl3"
 import "lib:devui"
 import glc "lib:glcore"
 
+@(require) import ai "extern:assimp"
+
 MAX_POINT_LIGHTS :: 4
 
 Light_Props :: struct {
@@ -429,14 +431,6 @@ ui_render :: proc() {
 	}
 }
 
-ui_render_shortcuts :: proc() {
-	devui.shortcut("ESC", "Close program")
-	devui.shortcut("U", "Enables wireframe mode")
-	devui.shortcut("I", "Toggle UI")
-	devui.shortcut("R", "Reload shaders")
-	devui.shortcut("(Shift +)WASD", "(Sprint) Camera move")
-	devui.shortcut("Right click (hold)", "Look around")
-}
 
 load_shaders :: proc(
 ) -> (
@@ -464,11 +458,7 @@ delete_shaders :: proc(shaders: ..glc.Shader_Program_Handle) {
 }
 
 process_events :: proc(event: sdl.Event) {
-	if glc.events_is_mouse_button_pressed({.RIGHT}) {
-		g_state.is_capturing_mouse = true
-	} else {
-		g_state.is_capturing_mouse = false
-	}
+	g_state.is_capturing_mouse = glc.events_is_mouse_button_pressed({.RIGHT})
 	_ = sdl.SetWindowRelativeMouseMode(g_state.window, g_state.is_capturing_mouse)
 
 	#partial switch event.type {
@@ -483,6 +473,15 @@ process_events :: proc(event: sdl.Event) {
 			glc.camera_on_mouse_move(&g_state.camera, event.motion.xrel, -event.motion.yrel, true)
 		}
 	}
+}
+
+ui_render_shortcuts :: proc() {
+	devui.shortcut("ESC", "Close program")
+	devui.shortcut("U", "Enables wireframe mode")
+	devui.shortcut("I", "Toggle UI")
+	devui.shortcut("R", "Reload shaders")
+	devui.shortcut("(Shift +)WASD", "(Sprint) Camera move")
+	devui.shortcut("Right click (hold)", "Look around")
 }
 
 process_key_input :: proc() {

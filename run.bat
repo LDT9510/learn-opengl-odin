@@ -9,8 +9,11 @@ set output_dir=.bin
 set input=src
 set executable=learn_opengl_dev.exe
 
+set vettable_packages=learn_opengl,devui,glcore
+
 set warnings_flags=^
 	-vet^
+	-vet-packages:%vettable_packages%^
 	-vet-semicolon^
 	-vet-style^
 	-vet-tabs^
