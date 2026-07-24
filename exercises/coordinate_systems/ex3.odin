@@ -88,6 +88,8 @@ g_cube_positions := [?]glm.vec3 {
 
 // odinfmt: enable
 
+TEXTURES_PATH :: glc.OPENGL_EXERCISES_PATH + "../textures/"
+
 main :: proc() {
 	when ODIN_OS == .Windows {
 		windows.SetProcessDPIAware()
@@ -151,7 +153,7 @@ main :: proc() {
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 
 	width, height, channels: i32
-	data := stbi.load("content/images/container.jpg", &width, &height, &channels, 0)
+	data := stbi.load(TEXTURES_PATH + "container.jpg", &width, &height, &channels, 0)
 	if data != nil {
 		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, width, height, 0, gl.RGB, gl.UNSIGNED_BYTE, data)
 		gl.GenerateMipmap(gl.TEXTURE_2D)
@@ -169,7 +171,7 @@ main :: proc() {
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 
 	stbi.set_flip_vertically_on_load(1)
-	data = stbi.load("content/images/awesomeface.png", &width, &height, &channels, 0)
+	data = stbi.load(TEXTURES_PATH + "awesomeface.png", &width, &height, &channels, 0)
 	if data != nil {
 		gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data)
 		gl.GenerateMipmap(gl.TEXTURE_2D)

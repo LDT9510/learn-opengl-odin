@@ -1,6 +1,8 @@
 @echo off
 setlocal EnableDelayedExpansion
 
+rem NOTE: executables in "output_dir" are not portable
+ 
 set command="%~1"
 
 set output_dir=.bin
@@ -88,9 +90,12 @@ if %command%=="ex" (
 		set is_debug=yes
 		set opt_flags=^
 			-debug
+		if "%~5"=="attach" (
+			set attach_debugger=yes
+		)
 	)
 
-	set exercise_section_dir=exercises\%~2
+	set exercise_section_dir=%~dp0exercises\%~2
 	set output_dir=.bin\exercises
 	set input=!exercise_section_dir!\ex%~3.odin -file
 	set executable=%~2_ex%~3.exe
@@ -118,6 +123,8 @@ if %build_all%==yes (
 	echo Building main program
 	%final_build_command%
 	
+	if not exist %output_dir%\exercises md %output_dir%\exercises
+
 	echo Building all exercices
 	for /d /r "exercises\" %%D in (*) do (
 		for %%F in ("%%D\*.odin") do (
@@ -125,8 +132,8 @@ if %build_all%==yes (
 			if exist !exercise_file! (
 				set output=%output_dir%\exercises\%%~nD_%%~nF.exe
 				set defines_flags=^
-					-define:OPENGL_EXERCISES_PATH=exercises\%%~nD\
-				start /b "" cmd /c "echo Building !output! && odin build !exercise_file! -file -out:!output! %build_flags%" %defines_flags%
+					-define:OPENGL_EXERCISES_PATH=%~dp0exercises\%%~nD\
+				start /b "" cmd /c "echo Building !output! && odin build !exercise_file! -file -out:!output! %build_flags% !defines_flags!"
 			)
 		)
 	)

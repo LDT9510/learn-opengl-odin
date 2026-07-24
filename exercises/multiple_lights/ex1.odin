@@ -1,9 +1,13 @@
+// Create some scenes with differtent lighthing conditions
 package learn_opengl
 
 @(require) import "core:mem"
 import "core:fmt"
+import "core:os"
 import "core:log"
+import "core:strings"
 import "core:sys/windows"
+import "core:encoding/json"
 import glm "core:math/linalg/glsl"
 
 import im "extern:imgui"
@@ -65,6 +69,18 @@ Lights :: struct {
 	spot:             Spot_Light,
 }
 
+MAX_PRESETS :: 5
+
+Preset :: struct {
+	name: cstring,
+	data: Lights,
+}
+
+Preset_Store :: struct {
+	list: [MAX_PRESETS]Preset,
+	idx:  i32,
+}
+
 State :: struct {
 	use_wireframe:         bool,
 	program_should_close:  bool,
@@ -74,6 +90,7 @@ State :: struct {
 	should_reload_shaders: bool,
 	show_ui:               bool,
 	lights:                Lights,
+	presets_store:         Preset_Store,
 }
 g_state: State
 
@@ -189,6 +206,7 @@ main :: proc() {
 		},
 	}
 
+
 	for i in 0 ..< MAX_POINT_LIGHTS {
 		g_state.lights.point[i] = {
 			position = POINT_LIGHTS_POSITIONS[i],
@@ -203,6 +221,13 @@ main :: proc() {
 
 	devui.init_for_sdl_window(g_state.window, gl_ctx)
 	defer devui.destroy()
+
+	are_presets_loaded := load_presets_from_disk(&g_state.presets_store)
+	defer unload_presets(&g_state.presets_store)
+
+	if are_presets_loaded {
+		g_state.lights = g_state.presets_store.list[g_state.presets_store.idx].data
+	}
 
 	main_shader, light_cube_shader := load_shaders()
 	defer delete_shaders(main_shader, light_cube_shader)
@@ -376,6 +401,7 @@ ui_render :: proc() {
 	glc.camera_dev_ui_frame(&g_state.camera)
 
 	if im.CollapsingHeader("Lights") {
+
 		im.ColorEdit3("Background", &g_state.lights.background_color)
 
 		if im.TreeNode("Directional") {
@@ -408,8 +434,34 @@ ui_render :: proc() {
 			props_render(&spot_light.props)
 			att_render(&spot_light.att)
 		}
+
+		@(static) buf := [30]u8{}
+		buf_cstring := _as_cstring(buf[:])
+
+		im.LabelText("##", "Serialize light info")
+		im.InputText("File", _as_cstring(buf[:]), len(buf))
+
+		if len(buf_cstring) > 0 {
+			im.SameLine()
+			if im.Button("Save") {
+				serialize_current_lights_info(_as_string(buf[:]))
+				buf = {}
+			}
+		}
 	}
 
+	im.Separator()
+	if im.ComboCallback(
+		"Lighting Preset",
+		&g_state.presets_store.idx,
+		presets_getter,
+		&g_state.presets_store.list,
+		MAX_PRESETS,
+	) {
+		g_state.lights = g_state.presets_store.list[g_state.presets_store.idx].data
+	}
+
+	im.Separator()
 	if im.Button("Reload Shaders") {
 		g_state.should_reload_shaders = true
 	}
@@ -426,6 +478,11 @@ ui_render :: proc() {
 		im.DragFloat("Constant", &att.constant, 0.01, 0.01, 1.0)
 		im.DragFloat("Linear", &att.linear, 0.01, 0.01, 1.0)
 		im.DragFloat("Quadratic", &att.quadratic, 0.01, 0.01, 1.0)
+	}
+
+	presets_getter :: proc "c" (user_data: rawptr, idx: i32) -> cstring {
+		preset := (cast([^]Preset)user_data)[idx]
+		return preset.name
 	}
 }
 
@@ -498,4 +555,78 @@ process_key_input :: proc() {
 	}
 
 	glc.camera_handle_input(&g_state.camera)
+}
+
+serialize_current_lights_info :: proc(name: string) {
+	// save it to the exercise directory
+	path := fmt.tprintf("%spresets/%s.json", glc.OPENGL_EXERCISES_PATH, name)
+
+	if os.exists(path) {
+		log.warnf("Light info '%s' already exists, skipping", name)
+		return
+	}
+
+	data, err := json.marshal(g_state.lights, allocator = context.temp_allocator)
+	if err != nil {
+		log.errorf("Error serializing light information: %v", err)
+		return
+	}
+
+	err2 := os.write_entire_file_from_bytes(path, data)
+	if err2 != nil {
+		log.errorf("Error writing light information to disk: %v", err2)
+		return
+	}
+
+	log.infof("Light information saved to: %s", path)
+}
+
+load_presets_from_disk :: proc(presets_store: ^Preset_Store) -> bool {
+	presets_loaded := 0
+	presets_dir := fmt.tprintf("%spresets/", glc.OPENGL_EXERCISES_PATH)
+
+	f, oerr := os.open(presets_dir)
+	ensure(oerr == nil)
+	defer os.close(f)
+	it := os.read_directory_iterator_create(f)
+	defer os.read_directory_iterator_destroy(&it)
+
+	for info, i in os.read_directory_iterator(&it) {
+		if strings.ends_with(info.name, ".json") {
+			serialized_preset, ferr := os.read_entire_file(info.fullpath, context.temp_allocator)
+			ensure(ferr == nil)
+
+			if i < MAX_PRESETS {
+				preset := &presets_store.list[i]
+				preset.name = strings.clone_to_cstring(
+					strings.trim_suffix(info.name, ".json"),
+					context.allocator,
+				)
+
+				merr := json.unmarshal(serialized_preset, &preset.data)
+				ensure(merr == nil)
+				log.infof("Loaded preset \"%s\"", preset.name)
+				presets_loaded += 1
+			}
+		}
+	}
+
+	log.infof("Loaded %d lighting presets", presets_loaded)
+
+	return presets_loaded > 0
+}
+
+unload_presets :: proc(preset_store: ^Preset_Store) {
+	for &preset in preset_store.list {
+		delete(preset.name)
+	}
+}
+
+
+_as_cstring :: proc(buf: []u8) -> cstring {
+	return cstring(raw_data(buf))
+}
+
+_as_string :: proc(buf: []u8) -> string {
+	return string(_as_cstring(buf))
 }
