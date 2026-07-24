@@ -4,6 +4,14 @@ import gl "vendor:OpenGL"
 
 Texture_Id :: distinct u32
 
+Texture :: struct {
+	id:   Texture_Id,
+	type: enum {
+		Difusse,
+		Specular
+	},
+}
+
 texture_load :: proc(image_name: string) -> (texture_id: Texture_Id, ok: bool) {
 	image_data := content_load_image(image_name) or_return
 	defer content_destroy_image(image_data)

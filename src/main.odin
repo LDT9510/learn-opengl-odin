@@ -6,9 +6,9 @@ import "core:log"
 import "core:sys/windows"
 import glm "core:math/linalg/glsl"
 
-import im "extern:imgui"
 import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
+import im "extern:imgui"
 
 import "lib:devui"
 import glc "lib:glcore"
