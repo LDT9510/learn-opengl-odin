@@ -3,13 +3,14 @@ setlocal EnableDelayedExpansion
 
 rem NOTE: executables in "output_dir" are not portable
  
-set command="%~1"
+set project_name=learn_opengl
 
+set command="%~1"
 set output_dir=.bin
 set input=src
-set executable=learn_opengl_dev.exe
+set executable=%project_name%_dev.exe
 
-set vettable_packages=learn_opengl,devui,glcore
+set vettable_packages=%project_name%
 
 set warnings_flags=^
 	-vet^
@@ -47,7 +48,7 @@ if %command%=="format" (
 	exit /b 0
 )
 if %command%=="debug" (
-	set executable=learn_opengl_debug.exe
+	set executable=%project_name%_debug.exe
 	set is_command_known=yes
 	set is_debug=yes
 	set opt_flags=^
@@ -58,7 +59,7 @@ if %command%=="debug" (
 	)
 )
 if %command%=="release" (
-	set executable=learn_opengl.exe
+	set executable=%project_name%.exe
 	set is_command_known=yes
 	set opt_flags=^
 		-o:speed
@@ -66,7 +67,7 @@ if %command%=="release" (
 		-subsystem:windows
 )
 if %command%=="release-size" (
-	set executable=learn_opengl_min.exe
+	set executable=%project_name%_min.exe
 	set is_command_known=yes
 	set opt_flags=^
 		-o:size
@@ -103,7 +104,8 @@ if %command%=="ex" (
 	set input=!exercise_section_dir!\ex%~3.odin -file
 	set executable=%~2_ex%~3.exe
 	set defines_flags=^
-		-define:OPENGL_EXERCISES_PATH=!exercise_section_dir!\
+		-define:OPENGL_EXERCISES_PATH=!exercise_section_dir!\^
+		-define:OPENGL_ROOT_CONTENT_PATH=%~dp0\
 )
 
 if %is_command_known%==no (
@@ -135,7 +137,8 @@ if %build_all%==yes (
 			if exist !exercise_file! (
 				set output=%output_dir%\exercises\%%~nD_%%~nF.exe
 				set defines_flags=^
-					-define:OPENGL_EXERCISES_PATH=%~dp0exercises\%%~nD\
+					-define:OPENGL_EXERCISES_PATH=%~dp0exercises\%%~nD\^
+					-define:OPENGL_ROOT_CONTENT_PATH=%~dp0
 				start /b "" cmd /c "echo Building !output! && odin build !exercise_file! -file -out:!output! %build_flags% !defines_flags!"
 			)
 		)
@@ -159,6 +162,7 @@ if %is_debug%==no (
 )
 if %is_debug%==yes (
 	if %attach_debugger%==yes (
+		if not exist ./misc md ./misc 
 		%final_build_command% && raddbg %output_dir%\%executable% --project:./misc/project.raddbg
 	)
 	if %attach_debugger%==no (

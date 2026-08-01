@@ -8,6 +8,7 @@ import "core:os"
 import "core:strings"
 
 OPENGL_EXERCISES_PATH :: #config(OPENGL_EXERCISES_PATH, "")
+OPENGL_ROOT_CONTENT_PATH :: #config(OPENGL_ROOT_CONTENT_PATH, "")
 
 CONTENT_BASE_PATH :: "content/" when OPENGL_EXERCISES_PATH == "" else OPENGL_EXERCISES_PATH
 
@@ -17,14 +18,32 @@ CONTENT_SHADER_PATH ::
 CONTENT_IMAGE_PATH ::
 	CONTENT_BASE_PATH + "images/" when OPENGL_EXERCISES_PATH == "" else OPENGL_EXERCISES_PATH
 
+// models are always in "content" for exercises
+CONTENT_MODEL_PATH ::
+	OPENGL_ROOT_CONTENT_PATH +
+	"models/" when OPENGL_EXERCISES_PATH !=
+	"" else CONTENT_BASE_PATH +
+	"models/"
+
 VERTEX_SHADER_EXT :: ".vert"
 FRAGMENT_SHADER_EXT :: ".frag"
 
 Shader_Code :: distinct cstring
 Image_Data :: ^image.Image
 
-content_load_image :: proc(image_name: string) -> (content: Image_Data, ok: bool) {
-	image_path := strings.concatenate({CONTENT_IMAGE_PATH, image_name})
+Model_Path :: struct {
+	full_path: string,
+	directory: string,
+}
+
+content_load_image :: proc(
+	image_name: string,
+	prefix := CONTENT_IMAGE_PATH,
+) -> (
+	content: Image_Data,
+	ok: bool,
+) {
+	image_path := strings.concatenate({prefix, image_name})
 	defer delete(image_path)
 
 	image_data, err := image.load(image_path)
@@ -34,6 +53,21 @@ content_load_image :: proc(image_name: string) -> (content: Image_Data, ok: bool
 	}
 
 	return image_data, true
+}
+
+content_get_model_path :: proc(model_name: string) -> (model_path: Model_Path) {
+	// TODO do not hardcode the extension
+	model_path.full_path = strings.concatenate(
+		{CONTENT_MODEL_PATH, model_name, "/", model_name, ".obj"},
+	)
+	last_separator_index := strings.last_index_byte(model_path.full_path, '/')
+	// include the separator
+	model_path.directory = model_path.full_path[0:last_separator_index + 1]
+	return
+}
+
+content_destroy_model_path :: proc(model_path: Model_Path) {
+	delete(model_path.full_path)
 }
 
 content_destroy_image :: proc(image_data: Image_Data) {

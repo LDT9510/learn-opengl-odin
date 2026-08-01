@@ -6,15 +6,15 @@ import glm "core:math/linalg/glsl"
 import gl "vendor:OpenGL"
 
 Vertex :: struct {
-	positions:  glm.vec3,
-	normals:    glm.vec3,
+	position:  glm.vec3,
+	normal:    glm.vec3,
 	tex_coords: glm.vec2,
 }
 
 Mesh :: struct {
 	vertices:      [dynamic]Vertex,
 	indices:       [dynamic]u32,
-	textures:      [dynamic]Texture,
+	textures:      [dynamic]Model_Texture,
 	vao, vbo, ebo: u32,
 }
 
@@ -46,10 +46,11 @@ mesh_init :: proc(mesh: ^Mesh) {
 	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, size_of(Vertex), 0)
 
 	// normals
-	gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, size_of(Vertex), offset_of(Vertex, normals))
+	gl.VertexAttribPointer(1, 3, gl.FLOAT, gl.FALSE, size_of(Vertex), offset_of(Vertex, normal))
 	gl.EnableVertexAttribArray(1)
 
 	// textures coords
+	gl.EnableVertexAttribArray(2)
 	gl.VertexAttribPointer(
 		2,
 		2,
@@ -58,15 +59,22 @@ mesh_init :: proc(mesh: ^Mesh) {
 		size_of(Vertex),
 		offset_of(Vertex, tex_coords),
 	)
-	gl.EnableVertexAttribArray(2)
 
 	gl.BindVertexArray(0)
 }
 
 mesh_delete :: proc(mesh: ^Mesh) {
-	defer gl.DeleteBuffers(1, &mesh.vbo)
-	defer gl.DeleteBuffers(1, &mesh.ebo)
-	defer gl.DeleteVertexArrays(1, &mesh.vao)
+	gl.DeleteBuffers(1, &mesh.vbo)
+	gl.DeleteBuffers(1, &mesh.ebo)
+	gl.DeleteVertexArrays(1, &mesh.vao)
+
+	delete(mesh.vertices)
+	delete(mesh.indices)
+
+	for &model_texture in mesh.textures {
+		texture_destroy(model_texture.id)
+	}
+	delete(mesh.textures)
 }
 
 mesh_draw :: proc(mesh: Mesh, shader: Shader_Program_Handle) {
@@ -79,12 +87,12 @@ mesh_draw :: proc(mesh: Mesh, shader: Shader_Program_Handle) {
 		texture := mesh.textures[i]
 		name: string
 		binding_num: int
-		switch texture.type {
-		case .Difusse:
+		#partial switch texture.type {
+		case .DIFFUSE:
 			name = "diffuse"
 			binding_num = diffuse_num
 			diffuse_num += 1
-		case .Specular:
+		case .SPECULAR:
 			name = "specular"
 			binding_num = specular_num
 			specular_num += 1
@@ -92,7 +100,7 @@ mesh_draw :: proc(mesh: Mesh, shader: Shader_Program_Handle) {
 
 		shader_uniform_set(
 			shader,
-			fmt.ctprint("material.texture_%s%d", name, binding_num),
+			fmt.ctprint("material.u_texture_%s%d", name, binding_num),
 			cast(i32)i,
 		)
 
@@ -101,6 +109,6 @@ mesh_draw :: proc(mesh: Mesh, shader: Shader_Program_Handle) {
 	gl.ActiveTexture(gl.TEXTURE0)
 
 	gl.BindVertexArray(mesh.vao)
-	gl.DrawElements(gl.TRIANGLES, cast(i32)len(mesh.indices), gl.UNSIGNED_INT, nil)
+	gl.DrawElements(gl.TRIANGLES, cast(i32)len(mesh.indices) - 1, gl.UNSIGNED_INT, nil)
 	gl.BindVertexArray(0)
 }

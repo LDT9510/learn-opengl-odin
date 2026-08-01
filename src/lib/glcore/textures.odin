@@ -4,18 +4,32 @@ import gl "vendor:OpenGL"
 
 Texture_Id :: distinct u32
 
-Texture :: struct {
-	id:   Texture_Id,
-	type: enum {
-		Difusse,
-		Specular
-	},
+texture_load :: proc {
+	texture_load_from_content,
+	texture_load_from_file_and_dir,
+	texture_load_from_image_data,
 }
 
-texture_load :: proc(image_name: string) -> (texture_id: Texture_Id, ok: bool) {
+texture_load_from_file_and_dir :: proc(dir, file: string) -> (texture_id: Texture_Id, ok: bool) {
+	image_data := content_load_image(file, dir) or_return
+	defer content_destroy_image(image_data)
+
+	return texture_load_from_image_data(image_data)
+}
+
+texture_load_from_content :: proc(image_name: string) -> (texture_id: Texture_Id, ok: bool) {
 	image_data := content_load_image(image_name) or_return
 	defer content_destroy_image(image_data)
 
+	return texture_load_from_image_data(image_data)
+}
+
+texture_load_from_image_data :: proc(
+	image_data: Image_Data,
+) -> (
+	texture_id: Texture_Id,
+	ok: bool,
+) {
 	tex_id: u32
 	gl.GenTextures(1, &tex_id)
 
