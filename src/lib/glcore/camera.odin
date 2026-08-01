@@ -29,7 +29,7 @@ Camera :: struct #all_or_none {
 	zoom:           f32,
 }
 
-camera_create :: proc(
+camera_create :: proc "contextless" (
 	pos: glm.vec3,
 	up: glm.vec3 = CAMERA_DEFAULT_UP,
 	yaw: f32 = CAMERA_DEFAULT_YAW,
@@ -112,7 +112,7 @@ camera_dev_ui_frame :: proc(c: ^Camera) {
 	}
 }
 
-_camera_update_vectors :: proc(c: ^Camera) {
+_camera_update_vectors :: proc "contextless" (c: ^Camera) {
 	front := glm.vec3 {
 		glm.cos(c.yaw) * glm.cos(c.pitch),
 		glm.sin(c.pitch),

@@ -55,10 +55,10 @@ camera_create :: proc(
 }
 
 camera_get_view_matrix :: proc(c: Camera) -> glm.mat4 {
-	rx, ry, rz := expand_values(c.right)
-	ux, uy, uz := expand_values(c.up)
-	dx, dy, dz := expand_values(-c.front) // inverted z-axis (rotate in opposite direction)
-	px, py, pz := expand_values(-c.position) // transform in opposite direction
+	rx, ry, rz := **c.right
+	ux, uy, uz := **c.up
+	dx, dy, dz := **-c.front // inverted z-axis (rotate in opposite direction)
+	px, py, pz := **-c.position // transform in opposite direction
 	
 	// odinfmt: disable
 	rotation := glm.mat4{

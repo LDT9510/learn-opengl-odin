@@ -12,25 +12,30 @@ import im "extern:imgui"
 import "lib:devui"
 import glc "lib:glcore"
 
-State :: struct {
+MAIN_SHADER_NAME :: "model_load"
+
+g_state: struct {
 	use_wireframe:         bool,
+	wireframe_toggled:     bool,
 	program_should_close:  bool,
 	camera:                glc.Camera,
 	window:                ^sdl.Window,
 	is_capturing_mouse:    bool,
 	should_reload_shaders: bool,
 	show_ui:               bool,
-	lights:                glc.Lights,
+	background_color:      glm.vec3,
+	shader_program:        glc.Shader_Program_Handle,
+} = {
+	camera             = glc.camera_create(pos = {-5, 0.5, 7}, yaw = 315, pitch = 0),
+	is_capturing_mouse = false,
+	show_ui            = true,
+	background_color   = {0.05, 0.05, 0.05},
 }
-g_state: State
 
 main :: proc() {
 	when ODIN_OS == .Windows {
 		windows.SetProcessDPIAware()
 	}
-
-	cl := log.create_console_logger(opt = {.Level})
-	context.logger = cl
 
 	when ODIN_DEBUG {
 		tracking_allocator := glc.create_tracking_allocator(context.allocator)
@@ -44,27 +49,11 @@ main :: proc() {
 		log.info("Debug mode")
 	}
 
-	glc.print_sdl_version()
+	cl := log.create_console_logger(opt = {.Level})
+	defer log.destroy_console_logger(cl)
+	context.logger = cl
 
-	// intial state
-	g_state = {
-		camera = glc.camera_create(pos = {-6, -0.5, 7}, yaw = 315, pitch = 0),
-		is_capturing_mouse = false,
-		show_ui = true,
-		lights = {
-			background_color = {0.05, 0.05, 0.05},
-			// directional = {
-			// 	direction = {-0.2, -1.0, -0.3},
-			// 	props = {color = 1.0, ambient = 0.2, diffuse = 0.5, specular = 1.0},
-			// },
-			// spot = {
-			// 	att = {constant = 1.0, linear = 0.09, quadratic = 0.032},
-			// 	props = {color = 1.0, ambient = 0.1, diffuse = 0.8, specular = 1.0},
-			// 	cutoff_rad = glm.radians_f32(12.0),
-			// 	outer_cutoff_rad = glm.radians_f32(17.0),
-			// },
-		},
-	}
+	glc.print_sdl_version()
 
 	gl_ctx: sdl.GLContext
 	g_state.window, gl_ctx = glc.create_opengl_window()
@@ -73,8 +62,11 @@ main :: proc() {
 	devui.init_for_sdl_window(g_state.window, gl_ctx)
 	defer devui.destroy()
 
-	model_shader := glc.shader_load_from_files("model_load") or_else panic("Error loading shaders")
-	defer glc.shader_delete_program(model_shader)
+	defer glc.model_unload_loaded_textures_path()
+
+	g_state.shader_program =
+		glc.shader_load_from_files(MAIN_SHADER_NAME) or_else panic("Error loading shaders")
+	defer glc.shader_delete_program(g_state.shader_program)
 
 	model := glc.model_load("backpack")
 	defer glc.model_delete(&model)
@@ -89,18 +81,26 @@ main :: proc() {
 
 		gl.PolygonMode(gl.FRONT_AND_BACK, g_state.use_wireframe ? gl.LINE : gl.FILL)
 
-		r, g, b := expand_values(g_state.lights.background_color)
-		gl.ClearColor(r, g, b, 1.0)
+		gl.ClearColor(**g_state.background_color, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
+		if g_state.wireframe_toggled {
+			g_state.wireframe_toggled = false
+			fragment_name := g_state.use_wireframe ? "green" : MAIN_SHADER_NAME
+			g_state.shader_program = glc.shader_reload(
+				g_state.shader_program,
+				MAIN_SHADER_NAME,
+				fragment_name,
+			)
+		}
+
 		if g_state.should_reload_shaders {
+			g_state.should_reload_shaders = false
 			log.info("Reloading shaders...")
 			defer log.info("Done!")
 
-			g_state.should_reload_shaders = false
-			glc.shader_delete_program(model_shader)
-			model_shader =
-				glc.shader_load_from_files("model_load") or_else panic("Error reloading shaders")
+			g_state.use_wireframe = false
+			g_state.shader_program = glc.shader_reload(g_state.shader_program, MAIN_SHADER_NAME)
 		}
 
 		view := glc.camera_get_view_matrix(g_state.camera)
@@ -111,15 +111,15 @@ main :: proc() {
 			100.0,
 		)
 
-		glc.shader_use_program(model_shader)
-		glc.shader_uniform_set(model_shader, "u_view", &view)
-		glc.shader_uniform_set(model_shader, "u_projection", &proj)
+		glc.shader_use_program(g_state.shader_program)
+		glc.shader_uniform_set(g_state.shader_program, "u_view", &view)
+		glc.shader_uniform_set(g_state.shader_program, "u_projection", &proj)
 
 		model_mat := glm.mat4Translate(0)
 		model_mat *= glm.mat4Scale(1)
-		glc.shader_uniform_set(model_shader, "u_model", &model_mat)
+		glc.shader_uniform_set(g_state.shader_program, "u_model", &model_mat)
 
-		glc.model_draw(model, model_shader)
+		glc.model_draw(model, g_state.shader_program)
 
 		if g_state.show_ui {
 			devui.render_ui("Learning OpenGL", ui_render, ui_render_shortcuts)
@@ -132,60 +132,19 @@ main :: proc() {
 }
 
 ui_render :: proc() {
+	if im.CollapsingHeader("General") {
+		im.ColorEdit3("Background Color", &g_state.background_color)
+		im.Checkbox("Use wireframe", &g_state.use_wireframe)
+		if im.Button("Reload Shaders") {
+			g_state.should_reload_shaders = true
+		}
+		if im.Button("Hide UI") {
+			g_state.show_ui = false
+			im.UpdateHoveredWindowAndCaptureFlags(0)
+		}
+	}
+
 	glc.camera_dev_ui_frame(&g_state.camera)
-
-	if im.CollapsingHeader("Lights") {
-		im.ColorEdit3("Background", &g_state.lights.background_color)
-
-		// if im.TreeNode("Directional") {
-		// 	defer im.TreePop()
-		//
-		// 	dir_light := &g_state.lights.directional
-		// 	im.DragFloat3("Direction", &dir_light.direction, 0.1, -4.0, 4.0)
-		// 	props_render(&dir_light.props)
-		// }
-		// if im.TreeNode("Points") {
-		// 	defer im.TreePop()
-		// 	for i in 0 ..< MAX_POINT_LIGHTS {
-		// 		if im.TreeNode(fmt.ctprintf("Point %d", i)) {
-		// 			defer im.TreePop()
-		//
-		// 			point_light := &g_state.lights.point[i]
-		// 			im.DragFloat3("Position", &point_light.position, 0.1, -4.0, 4.0)
-		// 			props_render(&point_light.props)
-		// 			att_render(&point_light.att)
-		// 		}
-		// 	}
-		// }
-		// if im.TreeNode("Spot") {
-		// 	defer im.TreePop()
-		//
-		// 	spot_light := &g_state.lights.spot
-		// 	im.SliderAngle("Cutoff Angle", &spot_light.cutoff_rad, 12.0, 16.0)
-		// 	im.SliderAngle("Outer Cutoff Angle", &spot_light.outer_cutoff_rad, 17.0, 25.0)
-		//
-		// 	props_render(&spot_light.props)
-		// 	att_render(&spot_light.att)
-		// }
-	}
-
-	if im.Button("Reload Shaders") {
-		g_state.should_reload_shaders = true
-	}
-
-	// ----------------- UI helpers ---------------------------
-	// props_render :: proc(props: ^Light_Props) {
-	// 	im.ColorEdit3("Color", &props.color)
-	// 	im.DragFloat("Ambient", &props.ambient, 0.01, 0.0, 1.0)
-	// 	im.DragFloat("Diffuse", &props.diffuse, 0.01, 0.0, 1.0)
-	// 	im.DragFloat("Specular", &props.specular, 0.01, 0.0, 1.0)
-	// }
-	//
-	// att_render :: proc(att: ^Light_Attenuation) {
-	// 	im.DragFloat("Constant", &att.constant, 0.01, 0.01, 1.0)
-	// 	im.DragFloat("Linear", &att.linear, 0.01, 0.01, 1.0)
-	// 	im.DragFloat("Quadratic", &att.quadratic, 0.01, 0.01, 1.0)
-	// }
 }
 
 process_events :: proc(event: sdl.Event) {
@@ -221,6 +180,7 @@ process_key_input :: proc() {
 		g_state.program_should_close = true
 	case glc.events_is_key_just_pressed(.U):
 		g_state.use_wireframe = !g_state.use_wireframe
+		g_state.wireframe_toggled = true
 	case glc.events_is_key_just_pressed(.I):
 		g_state.show_ui = !g_state.show_ui
 	case glc.events_is_key_just_pressed(.R):

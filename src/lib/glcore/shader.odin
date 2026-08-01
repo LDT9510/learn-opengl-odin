@@ -108,6 +108,34 @@ shader_load_diff_name_files :: proc(
 	return shader_load_from_code(vertex_code, fragment_code)
 }
 
+shader_reload :: proc {
+	shader_reload_same_name,
+	shader_reload_diff_name,
+}
+
+shader_reload_same_name :: proc(
+	current: Shader_Program_Handle,
+	common_name: string,
+) -> Shader_Program_Handle {
+
+	return shader_reload_diff_name(current, common_name, common_name)
+}
+
+shader_reload_diff_name :: proc(
+	current: Shader_Program_Handle,
+	vertex, fragment: string,
+) -> Shader_Program_Handle {
+	new_shader, ok := shader_load_from_files(vertex, fragment)
+	if !ok {
+		log.errorf("Cannot load shader: %s (Vertex), %s (Fragment)", vertex, fragment)
+		new_shader = current
+	} else {
+		shader_delete_program(current)
+	}
+
+	return new_shader
+}
+
 shader_use_program :: proc(program_id: Shader_Program_Handle) {
 	@(static) s_last_program_set: Shader_Program_Handle
 

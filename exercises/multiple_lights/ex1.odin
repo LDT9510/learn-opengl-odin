@@ -280,7 +280,7 @@ main :: proc() {
 
 		gl.PolygonMode(gl.FRONT_AND_BACK, g_state.use_wireframe ? gl.LINE : gl.FILL)
 
-		r, g, b := expand_values(g_state.lights.background_color)
+		r, g, b := **g_state.lights.background_color
 		gl.ClearColor(r, g, b, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 

@@ -6,18 +6,16 @@ MainUIProc :: #type proc()
 ShortcutsProc :: #type proc()
 
 render_shortcuts :: proc(shortcuts_ui_proc: ShortcutsProc) {
-	if im.CollapsingHeader("Global Shortcuts") {
-		TABLE_FLAGS :: im.TableFlags_RowBg | im.TableFlags_Borders
-		if im.BeginTable("shortcuts", 2, TABLE_FLAGS) {
-			defer im.EndTable()
-			im.TableSetupColumn("Key", {.WidthFixed}, 120.0)
-			im.TableSetupColumn("Description", {.WidthStretch})
-			im.TableHeadersRow()
-			im.TableNextRow()
-			im.TableNextColumn()
+	TABLE_FLAGS :: im.TableFlags_RowBg | im.TableFlags_Borders
+	if im.BeginTable("shortcuts", 2, TABLE_FLAGS) {
+		defer im.EndTable()
+		im.TableSetupColumn("Key", {.WidthFixed}, 120.0)
+		im.TableSetupColumn("Description", {.WidthStretch})
+		im.TableHeadersRow()
+		im.TableNextRow()
+		im.TableNextColumn()
 
-			shortcuts_ui_proc()
-		}
+		shortcuts_ui_proc()
 	}
 }
 
@@ -30,8 +28,9 @@ render_ui :: proc(title: cstring, main_ui_proc: MainUIProc, shortcuts_ui_proc: S
 	im.PushItemWidth(170.0)
 	defer im.PopItemWidth()
 
-	render_shortcuts(shortcuts_ui_proc)
 	main_ui_proc()
+	im.Separator()
+	render_shortcuts(shortcuts_ui_proc)
 }
 
 shortcut :: proc(name: cstring, description: cstring) {

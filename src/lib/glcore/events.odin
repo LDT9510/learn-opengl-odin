@@ -45,6 +45,7 @@ events_handle :: proc(
 		key_input_callback()
 	}
 
+
 	e: sdl.Event = ---
 	for sdl.PollEvent(&e) {
 		devui.process_event(&e)

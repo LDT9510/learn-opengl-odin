@@ -1,5 +1,6 @@
 package glcore
 
+import "core:mem"
 import "core:log"
 
 import ai "extern:assimp"
@@ -11,14 +12,18 @@ Model_Texture :: struct {
 }
 _g_all_loaded_textures_paths := [dynamic]Model_Texture{}
 
+model_unload_loaded_textures_path :: proc() {
+	delete(_g_all_loaded_textures_paths)
+}
+
 Model :: struct {
-	meshes:    [dynamic]Mesh,
-	path: Model_Path,
+	meshes: [dynamic]Mesh,
+	path:   Model_Path,
 }
 
 model_load :: proc(model_name: string) -> (model: Model) {
 	model.path = content_get_model_path(model_name)
- 
+
 	flags := ai.PostProcessSteps.Triangulate | ai.PostProcessSteps.FlipUVs
 	scene := ai.import_file(model.path.full_path, cast(u32)flags)
 
@@ -44,7 +49,7 @@ model_delete :: proc(model: ^Model) {
 }
 
 model_draw :: proc(model: Model, shader: Shader_Program_Handle) {
-	for mesh in model.meshes {
+	for &mesh in model.meshes {
 		mesh_draw(mesh, shader)
 	}
 }
@@ -60,7 +65,13 @@ _model_process_node :: proc(model: ^Model, node: ^ai.Node, scene: ^ai.Scene) {
 	}
 }
 
-_process_mesh :: proc(in_mesh: ^ai.Mesh, scene: ^ai.Scene, model_directory: string) -> (out_mesh: Mesh) {
+_process_mesh :: proc(
+	in_mesh: ^ai.Mesh,
+	scene: ^ai.Scene,
+	model_directory: string,
+) -> (
+	out_mesh: Mesh,
+) {
 	// vertex data
 	for i in 0 ..< in_mesh.mNumVertices {
 		vertex := Vertex {
@@ -98,6 +109,12 @@ _load_material_textures :: proc(
 	model_directory: string,
 	out_textures: ^[dynamic]Model_Texture,
 ) {
+	// practicing with stack allocator
+	buf: [2048]byte = ---
+	stack := mem.Stack{}
+	mem.stack_init(&stack, buf[:])
+	allocator := mem.stack_allocator(&stack)
+
 	for i in 0 ..< ai.get_material_textureCount(mat, type) {
 		ai_str_path := ai.String{}
 		_get_material_texture(mat, type, i, &ai_str_path)
@@ -112,8 +129,7 @@ _load_material_textures :: proc(
 		}
 
 		if !skip {
-			path := ai.string_clone_from_ai_string(&ai_str_path)
-			defer delete(path)
+			path := ai.string_clone_from_ai_string(&ai_str_path, allocator)
 
 			texture_id, ok := texture_load(model_directory, path)
 			assert(ok) // TODO handle better
