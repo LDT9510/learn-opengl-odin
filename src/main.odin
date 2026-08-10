@@ -3,6 +3,7 @@ package learn_opengl
 @(require) import "core:mem"
 @(require) import "core:fmt"
 import "core:log"
+import "core:slice"
 import "core:sys/windows"
 import glm "core:math/linalg/glsl"
 
@@ -76,16 +77,20 @@ g_state: struct {
 	stencil = {border_size = 0.1, border_color = {0.04, 0.28, 0.26}, should_draw_border = true},
 }
 
+Window_Position :: struct {
+	distance_to_camera: f32,
+	position:           glm.vec3,
+}
 // odinfmt: disable
-@rodata
-VEGETATION_POSITIONS := [?]glm.vec3 {
-	{-1.5,  0.0, -0.48},
-	{ 1.5,  0.0,  0.51},
-	{ 0.0,  0.0,  0.7},
-	{-0.3,  0.0, -2.3},
-	{ 0.5,  0.0, -0.6},
+window_positions := [?]Window_Position {
+	{0.0, {-1.5,  0.0, -0.48},},
+	{0.0, { 1.5,  0.0,  0.51},},
+	{0.0, { 0.0,  0.0,  0.7},},
+    {0.0, {-0.3,  0.0, -2.3},},
+    {0.0, { 0.5,  0.0, -0.6},},
 }
 // odinfmt: enable
+
 
 main :: proc() {
 	// windows specific fix
@@ -138,7 +143,12 @@ main :: proc() {
 	defer glc.primitive_destroy(&cube)
 	plane := glc.primitive_create(.Plane, "metal.png")
 	defer glc.primitive_destroy(&plane)
-	grass := glc.primitive_create(.Quad, "grass.png", flip_texture_vertically = true, transparent = true)
+	grass := glc.primitive_create(
+		.Quad,
+		"blending_transparent_window.png",
+		flip_texture_vertically = true,
+		transparent = true,
+	)
 	defer glc.primitive_destroy(&grass)
 
 	// required when loading any model
@@ -159,6 +169,10 @@ main :: proc() {
 		gl.StencilFunc(gl.ALWAYS, 1, 0xff)
 		gl.StencilOp(gl.KEEP, gl.KEEP, gl.REPLACE)
 		gl.StencilMask(0xff)
+
+		// blending setup
+		gl.Enable(gl.BLEND)
+		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
 		gl.PolygonMode(gl.FRONT_AND_BACK, g_state.use_wireframe ? gl.LINE : gl.FILL)
 
@@ -222,10 +236,20 @@ main :: proc() {
 			)
 		}
 
-		// vegetation
+		// windows
 		gl.StencilMask(0x00)
-		for vegetation_pos in VEGETATION_POSITIONS {
-			glc.primitive_draw(grass, g_state.shader_program, vegetation_pos)
+
+		// sort by distance (farthest to closest)
+		for &win_pos in window_positions {
+			// you can use glm.dot here and reverse the comparison during sorting
+			win_pos.distance_to_camera = glm.distance(g_state.camera.position, win_pos.position)
+		}
+		slice.sort_by(window_positions[:], proc(i, j: Window_Position) -> bool {
+			return i.distance_to_camera > j.distance_to_camera
+		})
+
+		for win_pos in window_positions {
+			glc.primitive_draw(grass, g_state.shader_program, win_pos.position)
 		}
 
 		// render developer UI
