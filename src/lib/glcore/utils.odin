@@ -4,6 +4,8 @@ import "core:os"
 import "core:log"
 import "core:mem"
 import "core:fmt"
+import "core:image"
+import "core:slice"
 
 import sdl "vendor:sdl3"
 
@@ -65,6 +67,21 @@ destroy_tracking_allocator :: proc(allocator: mem.Allocator, temp := false) -> b
 	free(a)
 
 	return err
+}
+
+flip_image_vertically_inplace :: proc(image_data: ^image.Image) {
+	row_size_in_bytes := (image_data.depth / 8) *image_data.width * image_data.channels
+	num_rows := image_data.height
+	temp_row := make([]byte, row_size_in_bytes)
+	defer delete(temp_row)
+
+	for i := 0; i < num_rows / 2; i += 1 {
+		top_row := image_data.pixels.buf[i * row_size_in_bytes:][:row_size_in_bytes]
+		bottom_row := image_data.pixels.buf[(num_rows - i - 1) * row_size_in_bytes:][:row_size_in_bytes]
+		copy(temp_row[:], top_row[:])
+		copy(top_row[:], bottom_row[:])
+		copy(bottom_row[:], temp_row[:])
+	}
 }
 
 crash :: proc(fmt_str: string, args: ..any, location := #caller_location) -> ! {

@@ -1,5 +1,7 @@
 package glcore
 
+import "core:image"
+
 import gl "vendor:OpenGL"
 
 Texture_Id :: distinct u32
@@ -10,22 +12,45 @@ texture_load :: proc {
 	texture_load_from_image_data,
 }
 
-texture_load_from_file_and_dir :: proc(dir, file: string) -> (texture_id: Texture_Id, ok: bool) {
+texture_load_from_file_and_dir :: proc(
+	dir, file: string,
+	flip_vertically := false,
+	transparent := false,
+) -> (
+	texture_id: Texture_Id,
+	ok: bool,
+) {
 	image_data := content_load_image(file, dir) or_return
 	defer content_destroy_image(image_data)
 
-	return texture_load_from_image_data(image_data)
+	if flip_vertically {
+		flip_image_vertically_inplace(image_data)
+	}
+
+	return texture_load_from_image_data(image_data, transparent)
 }
 
-texture_load_from_content :: proc(image_name: string) -> (texture_id: Texture_Id, ok: bool) {
+texture_load_from_content :: proc(
+	image_name: string,
+	flip_vertically := false,
+	transparent := false,
+) -> (
+	texture_id: Texture_Id,
+	ok: bool,
+) {
 	image_data := content_load_image(image_name) or_return
 	defer content_destroy_image(image_data)
 
-	return texture_load_from_image_data(image_data)
+	if flip_vertically {
+		flip_image_vertically_inplace(image_data)
+	}
+
+	return texture_load_from_image_data(image_data, transparent)
 }
 
 texture_load_from_image_data :: proc(
-	image_data: Image_Data,
+	image_data: ^image.Image,
+	transparent := false
 ) -> (
 	texture_id: Texture_Id,
 	ok: bool,
@@ -39,7 +64,7 @@ texture_load_from_image_data :: proc(
 	gl.TexImage2D(
 		gl.TEXTURE_2D,
 		0,
-		gl.RGB,
+		cast(i32)image_format,
 		cast(i32)image_data.width,
 		cast(i32)image_data.height,
 		0,
@@ -47,11 +72,15 @@ texture_load_from_image_data :: proc(
 		gl.UNSIGNED_BYTE,
 		raw_data(image_data.pixels.buf),
 	)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
-	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
+	gl.GenerateMipmap(gl.TEXTURE_2D)
+
+	// basically a hack
+	wrap_parameter : i32 = transparent ? gl.CLAMP_TO_EDGE : gl.REPEAT
+	
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap_parameter)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap_parameter)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-	gl.GenerateMipmap(gl.TEXTURE_2D)
 
 	return cast(Texture_Id)tex_id, true
 }

@@ -1,6 +1,7 @@
 package learn_opengl
 
 @(require) import "core:mem"
+@(require) import "core:fmt"
 import "core:log"
 import "core:sys/windows"
 import glm "core:math/linalg/glsl"
@@ -61,8 +62,8 @@ g_state: struct {
 		see_buffer_toggled: bool,
 	},
 	stencil:               struct {
-		border_size:  f32,
-		border_color: glm.vec3,
+		border_size:        f32,
+		border_color:       glm.vec3,
 		should_draw_border: bool,
 	},
 } = {
@@ -74,6 +75,17 @@ g_state: struct {
 	depth = {check_function = .Less},
 	stencil = {border_size = 0.1, border_color = {0.04, 0.28, 0.26}, should_draw_border = true},
 }
+
+// odinfmt: disable
+@rodata
+VEGETATION_POSITIONS := [?]glm.vec3 {
+	{-1.5,  0.0, -0.48},
+	{ 1.5,  0.0,  0.51},
+	{ 0.0,  0.0,  0.7},
+	{-0.3,  0.0, -2.3},
+	{ 0.5,  0.0, -0.6},
+}
+// odinfmt: enable
 
 main :: proc() {
 	// windows specific fix
@@ -91,13 +103,14 @@ main :: proc() {
 		defer glc.destroy_tracking_allocator(tracking_temp_allocator, temp = true)
 		context.temp_allocator = tracking_temp_allocator
 
-		log.info("Debug mode")
+		fmt.eprintln("-------- Debug mode --------")
 	}
 
 	// setup logging
 	cl := log.create_console_logger(opt = {.Level})
 	defer log.destroy_console_logger(cl)
 	context.logger = cl
+
 	glc.print_sdl_version()
 
 	// setup window
@@ -125,6 +138,8 @@ main :: proc() {
 	defer glc.primitive_destroy(&cube)
 	plane := glc.primitive_create(.Plane, "metal.png")
 	defer glc.primitive_destroy(&plane)
+	grass := glc.primitive_create(.Quad, "grass.png", flip_texture_vertically = true, transparent = true)
+	defer glc.primitive_destroy(&grass)
 
 	// required when loading any model
 	defer glc.model_unload_loaded_textures_path()
@@ -141,9 +156,9 @@ main :: proc() {
 
 		// stencil setup
 		gl.Enable(gl.STENCIL_TEST)
-		gl.StencilFunc(gl.ALWAYS, 1, 0xff) // all fragments will pass the tests
+		gl.StencilFunc(gl.ALWAYS, 1, 0xff)
 		gl.StencilOp(gl.KEEP, gl.KEEP, gl.REPLACE)
-		gl.StencilMask(0xff) // enable writing
+		gl.StencilMask(0xff)
 
 		gl.PolygonMode(gl.FRONT_AND_BACK, g_state.use_wireframe ? gl.LINE : gl.FILL)
 
@@ -170,21 +185,21 @@ main :: proc() {
 			glc.shader_uniform_set(g_state.shader_program, "u_far", g_state.frustrum.far)
 		}
 
-		// do not update the stencil for the floor
+		// floor
 		gl.StencilMask(0x00)
 		glc.primitive_draw(plane, g_state.shader_program, 0.0)
 
-		// write to the stencil when drawing the cubes
-		gl.StencilMask(0xff) // enable writing
+		// cubes
+		gl.StencilMask(0xff)
 		glc.primitive_draw(cube, g_state.shader_program, {2.0, 0.01, 0.0})
 		glc.primitive_draw(cube, g_state.shader_program, {-1.0, 0.01, -1.0})
 
-		// draw outline
+		// cubes outlines
 		if g_state.stencil.should_draw_border & !g_state.use_wireframe {
-			// disable writing to the stencil when drawing the outline (scaled cubes)
-			gl.StencilMask(0x00) // disable writing
-			gl.Disable(gl.DEPTH_TEST)
+			gl.StencilMask(0x00)
 			gl.StencilFunc(gl.NOTEQUAL, 1, 0xff)
+			defer gl.StencilFunc(gl.ALWAYS, 1, 0xff)
+
 			glc.shader_use_program(colored_border_shader)
 			glc.shader_uniform_set(colored_border_shader, "u_view", &view)
 			glc.shader_uniform_set(colored_border_shader, "u_projection", &proj)
@@ -207,6 +222,11 @@ main :: proc() {
 			)
 		}
 
+		// vegetation
+		gl.StencilMask(0x00)
+		for vegetation_pos in VEGETATION_POSITIONS {
+			glc.primitive_draw(grass, g_state.shader_program, vegetation_pos)
+		}
 
 		// render developer UI
 		if g_state.show_ui {

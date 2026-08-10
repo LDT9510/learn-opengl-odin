@@ -6,6 +6,7 @@ import glm "core:math/linalg/glsl"
 Primitive_Type :: enum {
 	Cube,
 	Plane,
+	Quad,
 }
 
 // while not using normals, else just use "mesh.Vertex"
@@ -20,13 +21,22 @@ Primitive :: struct {
 	vertex_size: i32,
 }
 
-primitive_create :: proc(p_type: Primitive_Type, image_name: string) -> (p: Primitive) {
+primitive_create :: proc(
+	p_type: Primitive_Type,
+	image_name: string,
+	flip_texture_vertically := false,
+	transparent := false
+) -> (
+	p: Primitive,
+) {
 	vertices: []Primitive_Vertex
 	switch p_type {
 	case .Cube:
 		vertices = CUBE_VERTICES[:]
 	case .Plane:
 		vertices = PLANE_VERTICES[:]
+	case .Quad:
+		vertices = QUAD_VERTICES[:]
 	}
 
 	p.vertex_size = cast(i32)len(vertices)
@@ -37,7 +47,7 @@ primitive_create :: proc(p_type: Primitive_Type, image_name: string) -> (p: Prim
 	gl.BindBuffer(gl.ARRAY_BUFFER, p.vbo)
 	gl.BufferData(
 		gl.ARRAY_BUFFER,
-		cast(int)p.vertex_size * size_of(Vertex),
+		cast(int)p.vertex_size * size_of(Primitive_Vertex),
 		raw_data(vertices),
 		gl.STATIC_DRAW,
 	)
@@ -54,7 +64,8 @@ primitive_create :: proc(p_type: Primitive_Type, image_name: string) -> (p: Prim
 	)
 	gl.BindVertexArray(0)
 
-	p.texture = texture_load(image_name) or_else panic("Cannot load texture")
+	p.texture =
+		texture_load(image_name, flip_texture_vertically, transparent) or_else panic("Cannot load texture")
 
 	return
 }
@@ -141,4 +152,17 @@ PLANE_VERTICES := [?]Primitive_Vertex{
     {{-5.0, -0.5, -5.0,},  {0.0, 2.0,},},
     {{ 5.0, -0.5, -5.0,},  {2.0, 2.0,},},
 }
+
+@rodata
+QUAD_VERTICES := [?]Primitive_Vertex{
+    // positions        // texture Coords
+	{{0.0,  0.5, 0.0,}, {0.0, 1.0,},},
+	{{0.0, -0.5, 0.0,}, {0.0, 0.0,},},
+	{{1.0, -0.5, 0.0,}, {1.0, 0.0,},},
+
+	{{0.0,  0.5, 0.0,}, {0.0, 1.0,},},
+	{{1.0, -0.5, 0.0,}, {1.0, 0.0,},},
+	{{1.0,  0.5, 0.0,}, {1.0, 1.0,},},
+}
+
 // odinfmt: enable

@@ -29,7 +29,6 @@ VERTEX_SHADER_EXT :: ".vert"
 FRAGMENT_SHADER_EXT :: ".frag"
 
 Shader_Code :: distinct cstring
-Image_Data :: ^image.Image
 
 Model_Path :: struct {
 	full_path: string,
@@ -40,7 +39,7 @@ content_load_image :: proc(
 	image_name: string,
 	prefix := CONTENT_IMAGE_PATH,
 ) -> (
-	content: Image_Data,
+	content: ^image.Image,
 	ok: bool,
 ) {
 	image_path := strings.concatenate({prefix, image_name})
@@ -70,7 +69,7 @@ content_destroy_model_path :: proc(model_path: Model_Path) {
 	delete(model_path.full_path)
 }
 
-content_destroy_image :: proc(image_data: Image_Data) {
+content_destroy_image :: proc(image_data: ^image.Image) {
 	image.destroy(image_data)
 }
 
