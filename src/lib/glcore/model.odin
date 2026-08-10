@@ -2,6 +2,7 @@ package glcore
 
 import "core:mem"
 import "core:log"
+import glm "core:math/linalg/glsl"
 
 import ai "extern:assimp"
 
@@ -48,9 +49,14 @@ model_delete :: proc(model: ^Model) {
 	content_destroy_model_path(model.path)
 }
 
-model_draw :: proc(model: Model, shader: Shader_Program_Handle) {
+model_draw :: proc(
+	model: Model,
+	shader: Shader_Program_Handle,
+	translation: glm.vec3 = 0,
+	scale: glm.vec3 = 1,
+) {
 	for &mesh in model.meshes {
-		mesh_draw(mesh, shader)
+		mesh_draw(mesh, shader, translation, scale)
 	}
 }
 

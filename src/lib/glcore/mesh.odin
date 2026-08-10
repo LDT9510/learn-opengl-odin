@@ -6,8 +6,8 @@ import glm "core:math/linalg/glsl"
 import gl "vendor:OpenGL"
 
 Vertex :: struct {
-	position:  glm.vec3,
-	normal:    glm.vec3,
+	position:   glm.vec3,
+	normal:     glm.vec3,
 	tex_coords: glm.vec2,
 }
 
@@ -77,7 +77,12 @@ mesh_delete :: proc(mesh: ^Mesh) {
 	delete(mesh.textures)
 }
 
-mesh_draw :: proc(mesh: Mesh, shader: Shader_Program_Handle) {
+mesh_draw :: proc(
+	mesh: Mesh,
+	shader: Shader_Program_Handle,
+	translation: glm.vec3 = 0,
+	scale: glm.vec3 = 1,
+) {
 	diffuse_num := 1
 	specular_num := 1
 
@@ -107,6 +112,11 @@ mesh_draw :: proc(mesh: Mesh, shader: Shader_Program_Handle) {
 		gl.BindTexture(gl.TEXTURE_2D, cast(u32)texture.id)
 	}
 	gl.ActiveTexture(gl.TEXTURE0)
+
+	shader_use_program(shader)
+	model_matrix := glm.mat4Translate(translation)
+	model_matrix *= glm.mat4Scale(scale)
+	shader_uniform_set(shader, "u_model", &model_matrix)
 
 	gl.BindVertexArray(mesh.vao)
 	gl.DrawElements(gl.TRIANGLES, cast(i32)len(mesh.indices) - 1, gl.UNSIGNED_INT, nil)
