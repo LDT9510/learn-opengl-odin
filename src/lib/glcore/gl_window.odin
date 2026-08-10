@@ -6,8 +6,8 @@ import "core:log"
 import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 
-WINDOW_WIDTH :: 800
-WINDOW_HEIGHT :: 600
+WINDOW_WIDTH :: 1200
+WINDOW_HEIGHT :: 960
 
 create_opengl_window :: proc() -> (window: ^sdl.Window, gl_ctx: sdl.GLContext) {
 	if !sdl.Init({.VIDEO}) {
