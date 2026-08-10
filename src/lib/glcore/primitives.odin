@@ -25,7 +25,7 @@ primitive_create :: proc(
 	p_type: Primitive_Type,
 	image_name: string,
 	flip_texture_vertically := false,
-	transparent := false
+	transparent := false,
 ) -> (
 	p: Primitive,
 ) {
@@ -65,7 +65,9 @@ primitive_create :: proc(
 	gl.BindVertexArray(0)
 
 	p.texture =
-		texture_load(image_name, flip_texture_vertically, transparent) or_else panic("Cannot load texture")
+		texture_load(image_name, flip_texture_vertically, transparent) or_else panic(
+			"Cannot load texture",
+		)
 
 	return
 }
@@ -97,47 +99,63 @@ primitive_destroy :: proc(p: ^Primitive) {
 }
 
 // odinfmt: disable
+/*
+    Remember: to specify vertices in a counter-clockwise winding order you need to visualize the triangle
+    as if you're in front of the triangle and from that point of view, is where you set their order.
+    
+    To define the order of a triangle on the right side of the cube for example, you'd imagine yourself looking
+    straight at the right side of the cube, and then visualize the triangle and make sure their order is specified
+    in a counter-clockwise order. This takes some practice, but try visualizing this yourself and see that this
+    is correct.
+*/
 @(rodata)
 CUBE_VERTICES := [?]Primitive_Vertex{
     // positions          // texture Coords
-    {{-0.5, -0.5, -0.5,},  {0.0, 0.0,},},
-    {{ 0.5, -0.5, -0.5,},  {1.0, 0.0,},},
-    {{ 0.5,  0.5, -0.5,},  {1.0, 1.0,},},
-    {{ 0.5,  0.5, -0.5,},  {1.0, 1.0,},},
-    {{-0.5,  0.5, -0.5,},  {0.0, 1.0,},},
-    {{-0.5, -0.5, -0.5,},  {0.0, 0.0,},},
-    {{-0.5, -0.5,  0.5,},  {0.0, 0.0,},},
-    {{ 0.5, -0.5,  0.5,},  {1.0, 0.0,},},
-    {{ 0.5,  0.5,  0.5,},  {1.0, 1.0,},},
-    {{ 0.5,  0.5,  0.5,},  {1.0, 1.0,},},
-    {{-0.5,  0.5,  0.5,},  {0.0, 1.0,},},
-    {{-0.5, -0.5,  0.5,},  {0.0, 0.0,},},
-    {{-0.5,  0.5,  0.5,},  {1.0, 0.0,},},
-    {{-0.5,  0.5, -0.5,},  {1.0, 1.0,},},
-    {{-0.5, -0.5, -0.5,},  {0.0, 1.0,},},
-    {{-0.5, -0.5, -0.5,},  {0.0, 1.0,},},
-    {{-0.5, -0.5,  0.5,},  {0.0, 0.0,},},
-    {{-0.5,  0.5,  0.5,},  {1.0, 0.0,},},
-    {{ 0.5,  0.5,  0.5,},  {1.0, 0.0,},},
-    {{ 0.5,  0.5, -0.5,},  {1.0, 1.0,},},
-    {{ 0.5, -0.5, -0.5,},  {0.0, 1.0,},},
-    {{ 0.5, -0.5, -0.5,},  {0.0, 1.0,},},
-    {{ 0.5, -0.5,  0.5,},  {0.0, 0.0,},},
-    {{ 0.5,  0.5,  0.5,},  {1.0, 0.0,},},
-    {{-0.5, -0.5, -0.5,},  {0.0, 1.0,},},
-    {{ 0.5, -0.5, -0.5,},  {1.0, 1.0,},},
-    {{ 0.5, -0.5,  0.5,},  {1.0, 0.0,},},
-    {{ 0.5, -0.5,  0.5,},  {1.0, 0.0,},},
-    {{-0.5, -0.5,  0.5,},  {0.0, 0.0,},},
-    {{-0.5, -0.5, -0.5,},  {0.0, 1.0,},},
-    {{-0.5,  0.5, -0.5,},  {0.0, 1.0,},},
-    {{ 0.5,  0.5, -0.5,},  {1.0, 1.0,},},
-    {{ 0.5,  0.5,  0.5,},  {1.0, 0.0,},},
-    {{ 0.5,  0.5,  0.5,},  {1.0, 0.0,},},
-    {{-0.5,  0.5,  0.5,},  {0.0, 0.0,},},
-    {{-0.5,  0.5, -0.5,},  {0.0, 1.0,},},
+    // Back face
+	{{-0.5, -0.5, -0.5,},  {0.0, 0.0,},}, // Bottom-left
+	{{ 0.5,  0.5, -0.5,},  {1.0, 1.0,},}, // top-right
+    {{ 0.5, -0.5, -0.5,},  {1.0, 0.0,},}, // bottom-right         
+    {{ 0.5,  0.5, -0.5,},  {1.0, 1.0,},}, // top-right
+    {{-0.5, -0.5, -0.5,},  {0.0, 0.0,},}, // bottom-left
+    {{-0.5,  0.5, -0.5,},  {0.0, 1.0,},}, // top-left
+    // Front face
+    {{-0.5, -0.5,  0.5,},  {0.0, 0.0,},}, // bottom-left
+    {{ 0.5, -0.5,  0.5,},  {1.0, 0.0,},}, // bottom-right
+    {{ 0.5,  0.5,  0.5,},  {1.0, 1.0,},}, // top-right
+    {{ 0.5,  0.5,  0.5,},  {1.0, 1.0,},}, // top-right
+    {{-0.5,  0.5,  0.5,},  {0.0, 1.0,},}, // top-left
+    {{-0.5, -0.5,  0.5,},  {0.0, 0.0,},}, // bottom-left
+    // Left face
+    {{-0.5,  0.5,  0.5,},  {1.0, 0.0,},}, // top-right
+    {{-0.5,  0.5, -0.5,},  {1.0, 1.0,},}, // top-left
+    {{-0.5, -0.5, -0.5,},  {0.0, 1.0,},}, // bottom-left
+    {{-0.5, -0.5, -0.5,},  {0.0, 1.0,},}, // bottom-left
+    {{-0.5, -0.5,  0.5,},  {0.0, 0.0,},}, // bottom-right
+    {{-0.5,  0.5,  0.5,},  {1.0, 0.0,},}, // top-right
+    // Right face
+    {{ 0.5,  0.5,  0.5,},  {1.0, 0.0,},}, // top-left
+    {{ 0.5, -0.5, -0.5,},  {0.0, 1.0,},}, // bottom-right
+    {{ 0.5,  0.5, -0.5,},  {1.0, 1.0,},}, // top-right         
+    {{ 0.5, -0.5, -0.5,},  {0.0, 1.0,},}, // bottom-right
+    {{ 0.5,  0.5,  0.5,},  {1.0, 0.0,},}, // top-left
+    {{ 0.5, -0.5,  0.5,},  {0.0, 0.0,},}, // bottom-left     
+    // Bottom face
+    {{-0.5, -0.5, -0.5,},  {0.0, 1.0,},}, // top-right
+    {{0.5, -0.5, -0.5,},  {1.0, 1.0,},}, // top-left
+    {{0.5, -0.5,  0.5,},  {1.0, 0.0,},}, // bottom-left
+    {{0.5, -0.5,  0.5,},  {1.0, 0.0,},}, // bottom-left
+    {{-0.5, -0.5,  0.5,},  {0.0, 0.0,},}, // bottom-right
+    {{-0.5, -0.5, -0.5,},  {0.0, 1.0,},}, // top-right
+    // Top face
+    {{-0.5,  0.5, -0.5,},  {0.0, 1.0,},}, // top-left
+    {{0.5,  0.5,  0.5,},  {1.0, 0.0,},}, // bottom-right
+    {{0.5,  0.5, -0.5,},  {1.0, 1.0,},}, // top-right     
+    {{0.5,  0.5,  0.5,},  {1.0, 0.0,},}, // bottom-right
+    {{-0.5,  0.5, -0.5,},  {0.0, 1.0,},}, // top-left
+    {{-0.5,  0.5,  0.5,},  {0.0, 0.0 },}, // bottom-left     
 }
 
+// should not be culled
 @rodata
 PLANE_VERTICES := [?]Primitive_Vertex{
     // note we set the texture coordinates higher than 1 
@@ -153,6 +171,7 @@ PLANE_VERTICES := [?]Primitive_Vertex{
     {{ 5.0, -0.5, -5.0,},  {2.0, 2.0,},},
 }
 
+// should not be culled
 @rodata
 QUAD_VERTICES := [?]Primitive_Vertex{
     // positions        // texture Coords

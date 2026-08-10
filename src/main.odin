@@ -174,6 +174,14 @@ main :: proc() {
 		gl.Enable(gl.BLEND)
 		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
+		// the vertex data must support this, 3D applications consistently 
+		// use CCW winding order, do keep track of objects that shouln't be culled,
+		// like flat quads (the grass)
+		// face culling setup
+		gl.Enable(gl.CULL_FACE)
+		gl.CullFace(gl.BACK) // default
+		gl.FrontFace(gl.CCW) // default
+
 		gl.PolygonMode(gl.FRONT_AND_BACK, g_state.use_wireframe ? gl.LINE : gl.FILL)
 
 		gl.ClearColor(**g_state.background_color, 1.0)
@@ -201,10 +209,12 @@ main :: proc() {
 
 		// floor
 		gl.StencilMask(0x00)
+		gl.Disable(gl.CULL_FACE)
 		glc.primitive_draw(plane, g_state.shader_program, 0.0)
 
 		// cubes
 		gl.StencilMask(0xff)
+		gl.Disable(gl.CULL_FACE)
 		glc.primitive_draw(cube, g_state.shader_program, {2.0, 0.01, 0.0})
 		glc.primitive_draw(cube, g_state.shader_program, {-1.0, 0.01, -1.0})
 
