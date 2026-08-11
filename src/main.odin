@@ -171,46 +171,8 @@ main :: proc() {
 	// required when loading any model
 	defer glc.model_unload_loaded_textures_path()
 
-	// framebuffer setup
-	framebuffer: u32
-	gl.GenFramebuffers(1, &framebuffer)
-	gl.BindFramebuffer(gl.FRAMEBUFFER, framebuffer)
-
-	// use a texture for the color
-	render_texture := glc.texture_load(glc.WINDOW_WIDTH, glc.WINDOW_HEIGHT)
-	defer glc.texture_destroy(render_texture)
-	screen_quad := glc.primitive_create(.Full_Quad, render_texture)
-	defer glc.primitive_destroy(&screen_quad)
-
-	// bind to framebuffer
-	gl.BindTexture(gl.TEXTURE_2D, cast(u32)render_texture)
-	gl.FramebufferTexture2D(
-		gl.FRAMEBUFFER,
-		gl.COLOR_ATTACHMENT0,
-		gl.TEXTURE_2D,
-		cast(u32)render_texture,
-		0,
-	)
-
-	// use a renderbuffer object for depth and stencil as there is no need to read back
-	rbo: u32
-	gl.GenRenderbuffers(1, &rbo)
-	gl.BindRenderbuffer(gl.RENDERBUFFER, rbo)
-	gl.RenderbufferStorage(
-		gl.RENDERBUFFER,
-		gl.DEPTH24_STENCIL8,
-		glc.WINDOW_WIDTH,
-		glc.WINDOW_HEIGHT,
-	)
-	// attach to framebuffer
-	gl.FramebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, rbo)
-
-	// check framebuffer
-	if gl.CheckFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE {
-		glc.crash("Framebuffer is not complete!")
-	}
-	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
-
+	screen_fb := glc.framebuffer_create(.Full_Quad, glc.WINDOW_WIDTH, glc.WINDOW_HEIGHT)
+	defer glc.framebuffer_destroy(&screen_fb)
 
 	// main loop
 	for !g_state.program_should_close {
@@ -222,15 +184,11 @@ main :: proc() {
 		handle_view_modes()
 
 		// first pass (draw to texture)
-		gl.BindFramebuffer(gl.FRAMEBUFFER, framebuffer)
+		glc.framebuffer_use(screen_fb)
 		draw_main_scene()
 
 		// second pass (draw to screen quad)
-		gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
-		gl.ClearColor(1.0, 1.0, 1.0, 1.0)
-		gl.Clear(gl.COLOR_BUFFER_BIT)
-		gl.Disable(gl.DEPTH_TEST)
-		glc.primitive_draw(screen_quad, g_state.shaders.quad)
+		glc.framebuffer_draw(screen_fb, g_state.shaders.quad, clear = true)
 
 		// render developer UI (always to screen)
 		if g_state.show_ui {
@@ -328,9 +286,6 @@ draw_main_scene :: proc() {
 			1.0 + g_state.stencil.border_size,
 		)
 	}
-
-
-	gl.BindVertexArray(0)
 }
 
 // ------------------------ helpers and utilities ------------------------
@@ -510,7 +465,7 @@ Post_Process_Effect :: struct {
 }
 
 load_post_process_effects :: proc(allocator := context.allocator) -> [dynamic]Post_Process_Effect {
-	effects := make([dynamic]Post_Process_Effect)
+	effects := make([dynamic]Post_Process_Effect, allocator)
 
 	f, oerr := os.open(glc.CONTENT_SHADER_PATH + "post/")
 	ensure(oerr == nil)
@@ -519,10 +474,9 @@ load_post_process_effects :: proc(allocator := context.allocator) -> [dynamic]Po
 	it := os.read_directory_iterator_create(f)
 	defer os.read_directory_iterator_destroy(&it)
 
-	loaded := 0
 	log.info("Loading post processing effects...")
 	for info in os.read_directory_iterator(&it) {
-		name_with_path := strings.concatenate({"post/", filepath.stem(info.name)})
+		name_with_path := strings.concatenate({"post/", filepath.stem(info.name)}, allocator)
 		defer delete(name_with_path)
 
 		effect_shader, ok := glc.shader_load_from_files("quad", name_with_path)
@@ -531,7 +485,7 @@ load_post_process_effects :: proc(allocator := context.allocator) -> [dynamic]Po
 			glc.crash("Error loading post processing effect")
 		}
 
-		capitalized_name := strings.to_pascal_case(filepath.stem(info.name))
+		capitalized_name := strings.to_pascal_case(filepath.stem(info.name), allocator)
 		defer delete(capitalized_name)
 
 		effect := Post_Process_Effect {
@@ -540,18 +494,17 @@ load_post_process_effects :: proc(allocator := context.allocator) -> [dynamic]Po
 		}
 
 		append(&effects, effect)
-		loaded += 1
 	}
-	log.infof("Loaded %d effects", loaded)
+	log.infof("Loaded %d effects", len(effects))
 
 	return effects
 }
 
-destroy_post_process_effects :: proc(effects: []Post_Process_Effect) {
+destroy_post_process_effects :: proc(effects: []Post_Process_Effect, allocator := context.allocator) {
 	for effect in effects {
-		delete(effect.name)
+		delete(effect.name, allocator)
 		glc.shader_delete_program(effect.shader)
 	}
 
-	delete(effects)
+	delete(effects, allocator)
 }
