@@ -73,7 +73,26 @@ content_destroy_image :: proc(image_data: ^image.Image) {
 	image.destroy(image_data)
 }
 
-content_load_shader_code :: proc(
+content_load_shader_code :: proc {
+	content_load_shader_code_from_file,
+	content_load_shader_code_fixed_path,
+}
+
+content_load_shader_code_from_file :: proc(
+	shader_file_path: string,
+) -> (
+	content: Shader_Code,
+	ok: bool,
+) {
+	file_content := cast(string)_read_file_bytes(shader_file_path) or_return
+	defer delete(file_content)
+
+	shader_code := cast(Shader_Code)strings.clone_to_cstring(file_content)
+
+	return shader_code, true
+}
+
+content_load_shader_code_fixed_path :: proc(
 	shader_name: string,
 	shader_type: Shader_Type,
 ) -> (
@@ -84,19 +103,15 @@ content_load_shader_code :: proc(
 	shader_file_path := strings.concatenate({CONTENT_SHADER_PATH, shader_name, extension})
 	defer delete(shader_file_path)
 
-	file_content := cast(string)_content_read_bytes(shader_file_path) or_return
-	defer delete(file_content)
-
-	shader_code := cast(Shader_Code)strings.clone_to_cstring(file_content)
-
-	return shader_code, true
+	return content_load_shader_code_from_file(shader_file_path)
 }
 
 content_destroy_shader_code :: proc(content: Shader_Code) {
 	delete(cast(string)content)
 }
 
-_content_read_bytes :: proc(path: string) -> (data: []byte, ok: bool) {
+@(private)
+_read_file_bytes :: proc(path: string) -> (data: []byte, ok: bool) {
 	content, error := os.read_entire_file(path, context.allocator)
 
 	if error != nil {

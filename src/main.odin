@@ -2,7 +2,10 @@ package learn_opengl
 
 @(require) import "core:mem"
 @(require) import "core:fmt"
+import "core:strings"
+import "core:path/filepath"
 import "core:log"
+import "core:os"
 import "core:sys/windows"
 import glm "core:math/linalg/glsl"
 
@@ -74,8 +77,14 @@ g_state: struct {
 		border_color:       glm.vec3,
 		should_draw_border: bool,
 	},
+	post_process:          struct {
+		toggled:        bool,
+		should_use:     bool,
+		effects:        [dynamic]Post_Process_Effect,
+		current_effect: i32,
+	},
 } = {
-	camera = glc.camera_create(pos = {0.0, 0.0, 3.0}),
+	camera = glc.camera_create(pos = {-0.1, 2.7, 9.9}, pitch = -18, yaw = -82),
 	frustrum = {0.1, 100.0},
 	is_capturing_mouse = false,
 	show_ui = true,
@@ -146,10 +155,12 @@ main :: proc() {
 	defer glc.shader_delete_program(g_state.shaders.border)
 
 	g_state.shaders.quad =
-		glc.shader_load_from_files("quad") or_else panic(
-			"Error loading shaders",
-		)
+		glc.shader_load_from_files("quad") or_else panic("Error loading shaders")
 	defer glc.shader_delete_program(g_state.shaders.quad)
+
+	// pos-process effects
+	g_state.post_process.effects = load_post_process_effects()
+	defer destroy_post_process_effects(g_state.post_process.effects[:])
 
 	// load models/primitives
 	g_state.objects.cube = glc.primitive_create(.Cube, "container.jpg")
@@ -173,7 +184,13 @@ main :: proc() {
 
 	// bind to framebuffer
 	gl.BindTexture(gl.TEXTURE_2D, cast(u32)render_texture)
-	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, cast(u32)render_texture, 0)
+	gl.FramebufferTexture2D(
+		gl.FRAMEBUFFER,
+		gl.COLOR_ATTACHMENT0,
+		gl.TEXTURE_2D,
+		cast(u32)render_texture,
+		0,
+	)
 
 	// use a renderbuffer object for depth and stencil as there is no need to read back
 	rbo: u32
@@ -200,6 +217,9 @@ main :: proc() {
 		// setup frame, camera and event handling
 		glc.events_handle(process_events, process_key_input)
 		glc.timing_update_delta_time()
+
+		// shader switching
+		handle_view_modes()
 
 		// first pass (draw to texture)
 		gl.BindFramebuffer(gl.FRAMEBUFFER, framebuffer)
@@ -251,7 +271,6 @@ draw_main_scene :: proc() {
 	gl.ClearColor(**g_state.background_color, 1.0)
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT)
 
-	handle_view_modes()
 
 	view := glc.camera_get_view_matrix(g_state.camera)
 	proj := glm.mat4Perspective(
@@ -358,10 +377,29 @@ ui_render :: proc() {
 		im.Checkbox("Show", &g_state.stencil.should_draw_border)
 	}
 
+	if im.CollapsingHeader("Post-processing") {
+		if im.Checkbox("Use effects", &g_state.post_process.should_use) {
+			g_state.post_process.toggled = true
+		}
+		if im.ComboCallback(
+			"Effect",
+			&g_state.post_process.current_effect,
+			get_post_process_effect_name,
+			raw_data(g_state.post_process.effects),
+			cast(i32)len(g_state.post_process.effects),
+		) {
+			g_state.post_process.toggled = true
+		}
+	}
+
 	get_depth_test_func_name :: proc "c" (_user_data: rawptr, idx: i32) -> cstring {
 		return DEPTH_FUNCTION_NAMES[idx]
 	}
 
+	get_post_process_effect_name :: proc "c" (_user_data: rawptr, idx: i32) -> cstring {
+		effects := cast([^]Post_Process_Effect)_user_data
+		return effects[idx].name
+	}
 }
 
 process_events :: proc(event: sdl.Event) {
@@ -446,4 +484,74 @@ handle_view_modes :: proc() {
 		g_state.depth.see_buffer = false
 		g_state.shaders.main = glc.shader_reload(g_state.shaders.main, MAIN_SHADER_NAME)
 	}
+
+	// hack
+	@(static) original_quad_shader_backup: glc.Shader_Program_Handle
+	@(static) init_once := true
+	if init_once {
+		init_once = false
+		original_quad_shader_backup = g_state.shaders.quad
+	}
+
+	if g_state.post_process.toggled {
+		g_state.post_process.toggled = false
+		if (g_state.post_process.should_use) {
+			g_state.shaders.quad =
+				g_state.post_process.effects[g_state.post_process.current_effect].shader
+		} else {
+			g_state.shaders.quad = original_quad_shader_backup
+		}
+	}
+}
+
+Post_Process_Effect :: struct {
+	name:   cstring,
+	shader: glc.Shader_Program_Handle,
+}
+
+load_post_process_effects :: proc(allocator := context.allocator) -> [dynamic]Post_Process_Effect {
+	effects := make([dynamic]Post_Process_Effect)
+
+	f, oerr := os.open(glc.CONTENT_SHADER_PATH + "post/")
+	ensure(oerr == nil)
+	defer os.close(f)
+
+	it := os.read_directory_iterator_create(f)
+	defer os.read_directory_iterator_destroy(&it)
+
+	loaded := 0
+	log.info("Loading post processing effects...")
+	for info in os.read_directory_iterator(&it) {
+		name_with_path := strings.concatenate({"post/", filepath.stem(info.name)})
+		defer delete(name_with_path)
+
+		effect_shader, ok := glc.shader_load_from_files("quad", name_with_path)
+
+		if !ok {
+			glc.crash("Error loading post processing effect")
+		}
+
+		capitalized_name := strings.to_pascal_case(filepath.stem(info.name))
+		defer delete(capitalized_name)
+
+		effect := Post_Process_Effect {
+			name   = strings.clone_to_cstring(capitalized_name),
+			shader = effect_shader,
+		}
+
+		append(&effects, effect)
+		loaded += 1
+	}
+	log.infof("Loaded %d effects", loaded)
+
+	return effects
+}
+
+destroy_post_process_effects :: proc(effects: []Post_Process_Effect) {
+	for effect in effects {
+		delete(effect.name)
+		glc.shader_delete_program(effect.shader)
+	}
+
+	delete(effects)
 }
