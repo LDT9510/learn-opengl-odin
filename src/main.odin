@@ -3,7 +3,6 @@ package learn_opengl
 @(require) import "core:mem"
 @(require) import "core:fmt"
 import "core:log"
-import "core:slice"
 import "core:sys/windows"
 import glm "core:math/linalg/glsl"
 
@@ -56,7 +55,15 @@ g_state: struct {
 	should_reload_shaders: bool,
 	show_ui:               bool,
 	background_color:      glm.vec3,
-	shader_program:        glc.Shader_Program_Handle,
+	shaders:               struct {
+		main:   glc.Shader_Program_Handle,
+		border: glc.Shader_Program_Handle,
+		quad:   glc.Shader_Program_Handle,
+	},
+	objects:               struct {
+		cube:  glc.Primitive,
+		plane: glc.Primitive,
+	},
 	depth:                 struct {
 		check_function:     Depth_Function,
 		see_buffer:         bool,
@@ -128,31 +135,65 @@ main :: proc() {
 	defer devui.destroy()
 
 	// load shaders
-	g_state.shader_program =
+	g_state.shaders.main =
 		glc.shader_load_from_files(MAIN_SHADER_NAME) or_else panic("Error loading shaders")
-	defer glc.shader_delete_program(g_state.shader_program)
+	defer glc.shader_delete_program(g_state.shaders.main)
 
-	colored_border_shader :=
+	g_state.shaders.border =
 		glc.shader_load_from_files(MAIN_SHADER_NAME, "colored_border") or_else panic(
 			"Error loading shaders",
 		)
-	defer glc.shader_delete_program(colored_border_shader)
+	defer glc.shader_delete_program(g_state.shaders.border)
+
+	g_state.shaders.quad =
+		glc.shader_load_from_files("quad") or_else panic(
+			"Error loading shaders",
+		)
+	defer glc.shader_delete_program(g_state.shaders.quad)
 
 	// load models/primitives
-	cube := glc.primitive_create(.Cube, "marble.jpg")
-	defer glc.primitive_destroy(&cube)
-	plane := glc.primitive_create(.Plane, "metal.png")
-	defer glc.primitive_destroy(&plane)
-	grass := glc.primitive_create(
-		.Quad,
-		"blending_transparent_window.png",
-		flip_texture_vertically = true,
-		transparent = true,
-	)
-	defer glc.primitive_destroy(&grass)
+	g_state.objects.cube = glc.primitive_create(.Cube, "container.jpg")
+	defer glc.primitive_destroy(&g_state.objects.cube)
+	g_state.objects.plane = glc.primitive_create(.Plane, "metal.png")
+	defer glc.primitive_destroy(&g_state.objects.plane)
 
 	// required when loading any model
 	defer glc.model_unload_loaded_textures_path()
+
+	// framebuffer setup
+	framebuffer: u32
+	gl.GenFramebuffers(1, &framebuffer)
+	gl.BindFramebuffer(gl.FRAMEBUFFER, framebuffer)
+
+	// use a texture for the color
+	render_texture := glc.texture_load(glc.WINDOW_WIDTH, glc.WINDOW_HEIGHT)
+	defer glc.texture_destroy(render_texture)
+	screen_quad := glc.primitive_create(.Full_Quad, render_texture)
+	defer glc.primitive_destroy(&screen_quad)
+
+	// bind to framebuffer
+	gl.BindTexture(gl.TEXTURE_2D, cast(u32)render_texture)
+	gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, cast(u32)render_texture, 0)
+
+	// use a renderbuffer object for depth and stencil as there is no need to read back
+	rbo: u32
+	gl.GenRenderbuffers(1, &rbo)
+	gl.BindRenderbuffer(gl.RENDERBUFFER, rbo)
+	gl.RenderbufferStorage(
+		gl.RENDERBUFFER,
+		gl.DEPTH24_STENCIL8,
+		glc.WINDOW_WIDTH,
+		glc.WINDOW_HEIGHT,
+	)
+	// attach to framebuffer
+	gl.FramebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, rbo)
+
+	// check framebuffer
+	if gl.CheckFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE {
+		glc.crash("Framebuffer is not complete!")
+	}
+	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
+
 
 	// main loop
 	for !g_state.program_should_close {
@@ -160,109 +201,18 @@ main :: proc() {
 		glc.events_handle(process_events, process_key_input)
 		glc.timing_update_delta_time()
 
-		// depth setup
-		gl.Enable(gl.DEPTH_TEST)
-		gl.DepthFunc(get_depth_test_function_value(g_state.depth.check_function))
+		// first pass (draw to texture)
+		gl.BindFramebuffer(gl.FRAMEBUFFER, framebuffer)
+		draw_main_scene()
 
-		// stencil setup
-		gl.Enable(gl.STENCIL_TEST)
-		gl.StencilFunc(gl.ALWAYS, 1, 0xff)
-		gl.StencilOp(gl.KEEP, gl.KEEP, gl.REPLACE)
-		gl.StencilMask(0xff)
+		// second pass (draw to screen quad)
+		gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
+		gl.ClearColor(1.0, 1.0, 1.0, 1.0)
+		gl.Clear(gl.COLOR_BUFFER_BIT)
+		gl.Disable(gl.DEPTH_TEST)
+		glc.primitive_draw(screen_quad, g_state.shaders.quad)
 
-		// blending setup
-		gl.Enable(gl.BLEND)
-		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-
-		// the vertex data must support this, 3D applications consistently 
-		// use CCW winding order, do keep track of objects that shouln't be culled,
-		// like flat quads (the grass)
-		// face culling setup
-		gl.Enable(gl.CULL_FACE)
-		gl.CullFace(gl.BACK) // default
-		gl.FrontFace(gl.CCW) // default
-
-		gl.PolygonMode(gl.FRONT_AND_BACK, g_state.use_wireframe ? gl.LINE : gl.FILL)
-
-		gl.ClearColor(**g_state.background_color, 1.0)
-		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT)
-
-		handle_view_modes()
-
-		view := glc.camera_get_view_matrix(g_state.camera)
-		proj := glm.mat4Perspective(
-			glm.radians(g_state.camera.zoom),
-			glc.window_get_aspect_ratio(g_state.window),
-			g_state.frustrum.near,
-			g_state.frustrum.far,
-		)
-
-		// rendering
-		glc.shader_use_program(g_state.shader_program)
-		glc.shader_uniform_set(g_state.shader_program, "u_view", &view)
-		glc.shader_uniform_set(g_state.shader_program, "u_projection", &proj)
-
-		if g_state.depth.see_buffer {
-			glc.shader_uniform_set(g_state.shader_program, "u_near", g_state.frustrum.near)
-			glc.shader_uniform_set(g_state.shader_program, "u_far", g_state.frustrum.far)
-		}
-
-		// floor
-		gl.StencilMask(0x00)
-		gl.Disable(gl.CULL_FACE)
-		glc.primitive_draw(plane, g_state.shader_program, 0.0)
-
-		// cubes
-		gl.StencilMask(0xff)
-		gl.Disable(gl.CULL_FACE)
-		glc.primitive_draw(cube, g_state.shader_program, {2.0, 0.01, 0.0})
-		glc.primitive_draw(cube, g_state.shader_program, {-1.0, 0.01, -1.0})
-
-		// cubes outlines
-		if g_state.stencil.should_draw_border & !g_state.use_wireframe {
-			gl.StencilMask(0x00)
-			gl.StencilFunc(gl.NOTEQUAL, 1, 0xff)
-			defer gl.StencilFunc(gl.ALWAYS, 1, 0xff)
-
-			glc.shader_use_program(colored_border_shader)
-			glc.shader_uniform_set(colored_border_shader, "u_view", &view)
-			glc.shader_uniform_set(colored_border_shader, "u_projection", &proj)
-			glc.shader_uniform_set(
-				colored_border_shader,
-				"u_border_color",
-				g_state.stencil.border_color,
-			)
-			glc.primitive_draw(
-				cube,
-				colored_border_shader,
-				{-1.0, 0.01, -1.0},
-				1.0 + g_state.stencil.border_size,
-			)
-			glc.primitive_draw(
-				cube,
-				colored_border_shader,
-				{2.0, 0.01, 0.0},
-				1.0 + g_state.stencil.border_size,
-			)
-		}
-
-		// windows
-		gl.StencilMask(0x00)
-
-		// sort by distance (farthest to closest)
-		for &win_pos in window_positions {
-			// you can use glm.dot here and reverse the comparison during sorting
-			win_pos.distance_to_camera = glm.distance(g_state.camera.position, win_pos.position)
-		}
-		slice.sort_by(window_positions[:], proc(i, j: Window_Position) -> bool {
-			return i.distance_to_camera > j.distance_to_camera
-		})
-
-		for win_pos in window_positions {
-			glc.primitive_draw(grass, g_state.shader_program, win_pos.position)
-		}
-
-		// render developer UI
+		// render developer UI (always to screen)
 		if g_state.show_ui {
 			devui.render_ui("Learning OpenGL", ui_render, ui_render_shortcuts)
 		}
@@ -271,6 +221,97 @@ main :: proc() {
 		sdl.GL_SwapWindow(g_state.window)
 		free_all(context.temp_allocator)
 	}
+}
+
+draw_main_scene :: proc() {
+	// depth setup
+	gl.Enable(gl.DEPTH_TEST)
+	gl.DepthFunc(get_depth_test_function_value(g_state.depth.check_function))
+
+	// stencil setup
+	gl.Enable(gl.STENCIL_TEST)
+	gl.StencilFunc(gl.ALWAYS, 1, 0xff)
+	gl.StencilOp(gl.KEEP, gl.KEEP, gl.REPLACE)
+	gl.StencilMask(0xff)
+
+	// blending setup
+	gl.Enable(gl.BLEND)
+	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+
+	// the vertex data must support this, 3D applications consistently
+	// use CCW winding order, do keep track of objects that shouln't be culled,
+	// like flat quads (the grass)
+	// face culling setup
+	gl.Enable(gl.CULL_FACE)
+	gl.CullFace(gl.BACK) // default
+	gl.FrontFace(gl.CCW) // default
+
+	gl.PolygonMode(gl.FRONT_AND_BACK, g_state.use_wireframe ? gl.LINE : gl.FILL)
+
+	gl.ClearColor(**g_state.background_color, 1.0)
+	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT)
+
+	handle_view_modes()
+
+	view := glc.camera_get_view_matrix(g_state.camera)
+	proj := glm.mat4Perspective(
+		glm.radians(g_state.camera.zoom),
+		glc.window_get_aspect_ratio(g_state.window),
+		g_state.frustrum.near,
+		g_state.frustrum.far,
+	)
+
+	// rendering
+	glc.shader_use_program(g_state.shaders.main)
+	glc.shader_uniform_set(g_state.shaders.main, "u_view", &view)
+	glc.shader_uniform_set(g_state.shaders.main, "u_projection", &proj)
+
+	if g_state.depth.see_buffer {
+		glc.shader_uniform_set(g_state.shaders.main, "u_near", g_state.frustrum.near)
+		glc.shader_uniform_set(g_state.shaders.main, "u_far", g_state.frustrum.far)
+	}
+
+	// floor
+	gl.StencilMask(0x00)
+	gl.Disable(gl.CULL_FACE)
+	glc.primitive_draw(g_state.objects.plane, g_state.shaders.main, 0.0)
+
+	// cubes
+	gl.StencilMask(0xff)
+	gl.Disable(gl.CULL_FACE)
+	glc.primitive_draw(g_state.objects.cube, g_state.shaders.main, {2.0, 0.01, 0.0})
+	glc.primitive_draw(g_state.objects.cube, g_state.shaders.main, {-1.0, 0.01, -1.0})
+
+	// cubes outlines
+	if g_state.stencil.should_draw_border & !g_state.use_wireframe {
+		gl.StencilMask(0x00)
+		gl.StencilFunc(gl.NOTEQUAL, 1, 0xff)
+		defer gl.StencilFunc(gl.ALWAYS, 1, 0xff)
+
+		glc.shader_use_program(g_state.shaders.border)
+		glc.shader_uniform_set(g_state.shaders.border, "u_view", &view)
+		glc.shader_uniform_set(g_state.shaders.border, "u_projection", &proj)
+		glc.shader_uniform_set(
+			g_state.shaders.border,
+			"u_border_color",
+			g_state.stencil.border_color,
+		)
+		glc.primitive_draw(
+			g_state.objects.cube,
+			g_state.shaders.border,
+			{-1.0, 0.01, -1.0},
+			1.0 + g_state.stencil.border_size,
+		)
+		glc.primitive_draw(
+			g_state.objects.cube,
+			g_state.shaders.border,
+			{2.0, 0.01, 0.0},
+			1.0 + g_state.stencil.border_size,
+		)
+	}
+
+
+	gl.BindVertexArray(0)
 }
 
 // ------------------------ helpers and utilities ------------------------
@@ -379,8 +420,8 @@ handle_view_modes :: proc() {
 	if g_state.wireframe_toggled {
 		g_state.wireframe_toggled = false
 		fragment_name := g_state.use_wireframe ? "green" : MAIN_SHADER_NAME
-		g_state.shader_program = glc.shader_reload(
-			g_state.shader_program,
+		g_state.shaders.main = glc.shader_reload(
+			g_state.shaders.main,
 			MAIN_SHADER_NAME,
 			fragment_name,
 		)
@@ -389,8 +430,8 @@ handle_view_modes :: proc() {
 	if g_state.depth.see_buffer_toggled {
 		g_state.depth.see_buffer_toggled = false
 		fragment_name := g_state.depth.see_buffer ? "depth_buffer_view" : MAIN_SHADER_NAME
-		g_state.shader_program = glc.shader_reload(
-			g_state.shader_program,
+		g_state.shaders.main = glc.shader_reload(
+			g_state.shaders.main,
 			MAIN_SHADER_NAME,
 			fragment_name,
 		)
@@ -403,6 +444,6 @@ handle_view_modes :: proc() {
 
 		g_state.use_wireframe = false
 		g_state.depth.see_buffer = false
-		g_state.shader_program = glc.shader_reload(g_state.shader_program, MAIN_SHADER_NAME)
+		g_state.shaders.main = glc.shader_reload(g_state.shaders.main, MAIN_SHADER_NAME)
 	}
 }

@@ -10,6 +10,19 @@ texture_load :: proc {
 	texture_load_from_content,
 	texture_load_from_file_and_dir,
 	texture_load_from_image_data,
+	texture_load_empty,
+}
+
+texture_load_empty :: proc(width, height: i32) -> Texture_Id {
+	texture_id: u32
+	gl.GenTextures(1, &texture_id)
+	gl.BindTexture(gl.TEXTURE_2D, texture_id)
+	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, width, height, 0, gl.RGB, gl.UNSIGNED_BYTE, nil)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+	gl.BindTexture(gl.TEXTURE_2D, 0)
+
+	return cast(Texture_Id)texture_id
 }
 
 texture_load_from_file_and_dir :: proc(
@@ -50,7 +63,7 @@ texture_load_from_content :: proc(
 
 texture_load_from_image_data :: proc(
 	image_data: ^image.Image,
-	transparent := false
+	transparent := false,
 ) -> (
 	texture_id: Texture_Id,
 	ok: bool,
@@ -75,8 +88,8 @@ texture_load_from_image_data :: proc(
 	gl.GenerateMipmap(gl.TEXTURE_2D)
 
 	// basically a hack
-	wrap_parameter : i32 = transparent ? gl.CLAMP_TO_EDGE : gl.REPEAT
-	
+	wrap_parameter: i32 = transparent ? gl.CLAMP_TO_EDGE : gl.REPEAT
+
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap_parameter)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap_parameter)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)

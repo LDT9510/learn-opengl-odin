@@ -7,6 +7,7 @@ Primitive_Type :: enum {
 	Cube,
 	Plane,
 	Quad,
+	Full_Quad,
 }
 
 // while not using normals, else just use "mesh.Vertex"
@@ -19,9 +20,31 @@ Primitive :: struct {
 	vao, vbo:    u32,
 	texture:     Texture_Id,
 	vertex_size: i32,
+	type:        Primitive_Type,
 }
 
-primitive_create :: proc(
+primitive_create :: proc {
+	primitive_create_from_image,
+	primitive_create_from_render_texture,
+}
+
+primitive_create_from_render_texture :: proc(
+	p_type: Primitive_Type,
+	render_texture: Texture_Id,
+	flip_texture_vertically := false,
+	transparent := false,
+) -> (
+	p: Primitive,
+) {
+	p = _primitive_create_internal(p_type, flip_texture_vertically, transparent)
+
+	p.texture = render_texture
+
+	return
+
+}
+
+primitive_create_from_image :: proc(
 	p_type: Primitive_Type,
 	image_name: string,
 	flip_texture_vertically := false,
@@ -29,6 +52,26 @@ primitive_create :: proc(
 ) -> (
 	p: Primitive,
 ) {
+	p = _primitive_create_internal(p_type, flip_texture_vertically, transparent)
+
+	p.texture =
+		texture_load(image_name, flip_texture_vertically, transparent) or_else panic(
+			"Cannot load texture",
+		)
+
+	return
+}
+
+@(private)
+_primitive_create_internal :: proc(
+	p_type: Primitive_Type,
+	flip_texture_vertically: bool,
+	transparent: bool,
+) -> (
+	p: Primitive,
+) {
+	p.type = p_type
+
 	vertices: []Primitive_Vertex
 	switch p_type {
 	case .Cube:
@@ -37,6 +80,8 @@ primitive_create :: proc(
 		vertices = PLANE_VERTICES[:]
 	case .Quad:
 		vertices = QUAD_VERTICES[:]
+	case .Full_Quad:
+		vertices = FULL_SCREEN_QUAD_VERTICES[:]
 	}
 
 	p.vertex_size = cast(i32)len(vertices)
@@ -64,13 +109,9 @@ primitive_create :: proc(
 	)
 	gl.BindVertexArray(0)
 
-	p.texture =
-		texture_load(image_name, flip_texture_vertically, transparent) or_else panic(
-			"Cannot load texture",
-		)
-
 	return
 }
+
 
 primitive_draw :: proc(
 	p: Primitive,
@@ -79,11 +120,16 @@ primitive_draw :: proc(
 	scale: glm.vec3 = 1,
 ) {
 	shader_use_program(shader)
-	shader_uniform_set(shader, "u_texture_diffuse1", 0)
 
-	model_matrix := glm.mat4Translate(translation)
-	model_matrix *= glm.mat4Scale(scale)
-	shader_uniform_set(shader, "u_model", &model_matrix)
+	if p.type == .Full_Quad {
+		shader_uniform_set(shader, "u_screen_texture", 0)
+	} else {
+		shader_uniform_set(shader, "u_texture_diffuse1", 0)
+
+		model_matrix := glm.mat4Translate(translation)
+		model_matrix *= glm.mat4Scale(scale)
+		shader_uniform_set(shader, "u_model", &model_matrix)
+	}
 
 	gl.BindVertexArray(p.vao)
 	gl.ActiveTexture(gl.TEXTURE0)
@@ -97,6 +143,8 @@ primitive_destroy :: proc(p: ^Primitive) {
 	gl.DeleteBuffers(1, &p.vbo)
 	texture_destroy(p.texture)
 }
+
+
 
 // odinfmt: disable
 /*
@@ -184,4 +232,16 @@ QUAD_VERTICES := [?]Primitive_Vertex{
 	{{1.0,  0.5, 0.0,}, {1.0, 1.0,},},
 }
 
+// should not be culled
+@rodata
+FULL_SCREEN_QUAD_VERTICES := [?]Primitive_Vertex{
+    // positions        // texture Coords
+	{{-1.0,  1.0, 0.0,}, {0.0, 1.0,},},
+	{{-1.0, -1.0, 0.0,}, {0.0, 0.0,},},
+	{{ 1.0, -1.0, 0.0,}, {1.0, 0.0,},},
+
+	{{-1.0,  1.0, 0.0,}, {0.0, 1.0,},},
+	{{ 1.0, -1.0, 0.0,}, {1.0, 0.0,},},
+	{{ 1.0,  1.0, 0.0,}, {1.0, 1.0,},},
+}
 // odinfmt: enable
