@@ -8,6 +8,7 @@ Primitive_Type :: enum {
 	Plane,
 	Quad,
 	Full_Quad,
+	Mini_Quad,
 }
 
 // while not using normals, else just use "mesh.Vertex"
@@ -82,6 +83,8 @@ _primitive_create_internal :: proc(
 		vertices = QUAD_VERTICES[:]
 	case .Full_Quad:
 		vertices = FULL_SCREEN_QUAD_VERTICES[:]
+	case .Mini_Quad:
+		vertices = MINI_QUAD_VERTICES[:]
 	}
 
 	p.vertex_size = cast(i32)len(vertices)
@@ -243,5 +246,18 @@ FULL_SCREEN_QUAD_VERTICES := [?]Primitive_Vertex{
 	{{-1.0,  1.0, 0.0,}, {0.0, 1.0,},},
 	{{ 1.0, -1.0, 0.0,}, {1.0, 0.0,},},
 	{{ 1.0,  1.0, 0.0,}, {1.0, 1.0,},},
+}
+
+// should not be culled
+@rodata
+MINI_QUAD_VERTICES := [?]Primitive_Vertex{
+    // positions        // texture Coords
+	{{-0.3, 1.0, 0.0,}, {0.0, 1.0,},},
+	{{-0.3, 0.7, 0.0,}, {0.0, 0.0,},},
+	{{ 0.3, 0.7, 0.0,}, {1.0, 0.0,},},
+
+	{{-0.3, 1.0, 0.0,}, {0.0, 1.0,},},
+	{{ 0.3, 0.7, 0.0,}, {1.0, 0.0,},},
+	{{ 0.3, 1.0, 0.0,}, {1.0, 1.0,},},
 }
 // odinfmt: enable

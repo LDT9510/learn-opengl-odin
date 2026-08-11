@@ -169,3 +169,5 @@ if %is_debug%==yes (
 		%final_build_command% && %output_dir%\%executable%
 	)
 )
+
+exit /b %ERRORLEVEL%
