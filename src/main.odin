@@ -18,31 +18,6 @@ import glc "lib:glcore"
 
 MAIN_SHADER_NAME :: "model_load"
 
-Depth_Function :: enum u32 {
-	Always,
-	Never,
-	Less,
-	Equal,
-	// + others
-}
-@(rodata)
-DEPTH_FUNCTION_NAMES := [?]cstring{"Always", "Never", "Less", "Equal"}
-
-get_depth_test_function_value :: proc(func: Depth_Function) -> u32 {
-	switch func {
-	case .Always:
-		return gl.ALWAYS
-	case .Never:
-		return gl.NEVER
-	case .Less:
-		return gl.LESS
-	case .Equal:
-		return gl.EQUAL
-	}
-
-	return 0
-}
-
 Background_Type :: enum {
 	Solid_Color,
 	Skybox,
@@ -79,7 +54,6 @@ g_state: struct {
 		plane: glc.Primitive,
 	},
 	depth:                 struct {
-		check_function:     Depth_Function,
 		see_buffer:         bool,
 		see_buffer_toggled: bool,
 	},
@@ -100,7 +74,6 @@ g_state: struct {
 	is_capturing_mouse = false,
 	show_ui = true,
 	background = {color = {0.05, 0.05, 0.05}, type = .Skybox},
-	depth = {check_function = .Less},
 	stencil = {border_size = 0.1, border_color = {0.04, 0.28, 0.26}, should_draw_border = true},
 }
 
@@ -222,7 +195,7 @@ main :: proc() {
 draw_main_scene :: proc() {
 	// depth setup
 	gl.Enable(gl.DEPTH_TEST)
-	gl.DepthFunc(get_depth_test_function_value(g_state.depth.check_function))
+	gl.DepthFunc(gl.LESS)
 
 	// stencil setup
 	gl.Enable(gl.STENCIL_TEST)
@@ -251,13 +224,10 @@ draw_main_scene :: proc() {
 	} else {
 		g_state.background.type = .Skybox
 	}
-
 	// show the wireframe for the main scene only, not the render texture
 	defer gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
 
-	if g_state.background.type == .Solid_Color {
-		gl.ClearColor(**g_state.background.color, 1.0)
-	}
+	gl.ClearColor(**g_state.background.color, 1.0)
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT)
 
 	view := glc.camera_get_view_matrix(g_state.camera)
@@ -269,10 +239,6 @@ draw_main_scene :: proc() {
 	)
 
 	// rendering
-	if g_state.background.type == .Skybox {
-		glc.cubemap_draw(g_state.background.skybox, g_state.shaders.skybox, &view, &proj)
-	}
-
 	glc.shader_use_program(g_state.shaders.main)
 	glc.shader_uniform_set(g_state.shaders.main, "u_view", &view)
 	glc.shader_uniform_set(g_state.shaders.main, "u_projection", &proj)
@@ -320,6 +286,11 @@ draw_main_scene :: proc() {
 			1.0 + g_state.stencil.border_size,
 		)
 	}
+
+	// render the skybox last
+	if g_state.background.type == .Skybox {
+		glc.cubemap_draw(g_state.background.skybox, g_state.shaders.skybox, &view, &proj)
+	}
 }
 
 // ------------------------ helpers and utilities ------------------------
@@ -356,17 +327,6 @@ ui_render :: proc() {
 	glc.camera_dev_ui_frame(&g_state.camera)
 
 	if im.CollapsingHeader("Depth testing") {
-		depth_test_raw := cast(i32)g_state.depth.check_function
-		if im.ComboCallback(
-			"Test function",
-			&depth_test_raw,
-			get_depth_test_func_name,
-			nil,
-			len(Depth_Function),
-		) {
-			g_state.depth.check_function = cast(Depth_Function)depth_test_raw
-		}
-
 		if im.Checkbox("See depth buffer", &g_state.depth.see_buffer) {
 			g_state.depth.see_buffer_toggled = true
 		}
@@ -391,10 +351,6 @@ ui_render :: proc() {
 		) {
 			g_state.post_process.toggled = true
 		}
-	}
-
-	get_depth_test_func_name :: proc "c" (_user_data: rawptr, idx: i32) -> cstring {
-		return DEPTH_FUNCTION_NAMES[idx]
 	}
 
 	get_post_process_effect_name :: proc "c" (user_data: rawptr, idx: i32) -> cstring {

@@ -72,8 +72,8 @@ cubemap_draw :: proc(
 	view_matrix: ^glm.mat4,
 	projection_matrix: ^glm.mat4,
 ) {
-	gl.DepthMask(gl.FALSE)
-	defer gl.DepthMask(gl.TRUE)
+	gl.DepthFunc(gl.LEQUAL)
+	defer gl.DepthFunc(gl.LESS)
 
 	// remove the translation part from the view
 	cubemap_view_matrix := glm.mat4(glm.mat3(view_matrix^))
@@ -85,6 +85,7 @@ cubemap_draw :: proc(
 	gl.BindVertexArray(cubemap.vao)
 	gl.BindTexture(gl.TEXTURE_CUBE_MAP, cubemap.texture)
 	gl.DrawArrays(gl.TRIANGLES, 0, len(CUBE_VERTICES))
+	gl.BindVertexArray(0)
 }
 
 // odinfmt: disable
