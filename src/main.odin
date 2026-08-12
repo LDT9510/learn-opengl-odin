@@ -43,6 +43,11 @@ get_depth_test_function_value :: proc(func: Depth_Function) -> u32 {
 	return 0
 }
 
+Background_Type :: enum {
+	Solid_Color,
+	Skybox,
+}
+
 // global application state
 g_state: struct {
 	use_wireframe:         bool,
@@ -57,11 +62,17 @@ g_state: struct {
 	is_capturing_mouse:    bool,
 	should_reload_shaders: bool,
 	show_ui:               bool,
-	background_color:      glm.vec3,
+	background:            struct {
+		color:   glm.vec3,
+		skybox:  glc.Cubemap,
+		type:    Background_Type,
+		current: i32,
+	},
 	shaders:               struct {
 		main:   glc.Shader_Program_Handle,
 		border: glc.Shader_Program_Handle,
 		quad:   glc.Shader_Program_Handle,
+		skybox: glc.Shader_Program_Handle,
 	},
 	objects:               struct {
 		cube:  glc.Primitive,
@@ -88,7 +99,7 @@ g_state: struct {
 	frustrum = {0.1, 100.0},
 	is_capturing_mouse = false,
 	show_ui = true,
-	background_color = {0.05, 0.05, 0.05},
+	background = {color = {0.05, 0.05, 0.05}, type = .Skybox},
 	depth = {check_function = .Less},
 	stencil = {border_size = 0.1, border_color = {0.04, 0.28, 0.26}, should_draw_border = true},
 }
@@ -145,18 +156,22 @@ main :: proc() {
 
 	// load shaders
 	g_state.shaders.main =
-		glc.shader_load_from_files(MAIN_SHADER_NAME) or_else panic("Error loading shaders")
+		glc.shader_load_from_files(MAIN_SHADER_NAME) or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(g_state.shaders.main)
 
 	g_state.shaders.border =
-		glc.shader_load_from_files(MAIN_SHADER_NAME, "colored_border") or_else panic(
+		glc.shader_load_from_files(MAIN_SHADER_NAME, "colored_border") or_else glc.crash(
 			"Error loading shaders",
 		)
 	defer glc.shader_delete_program(g_state.shaders.border)
 
 	g_state.shaders.quad =
-		glc.shader_load_from_files("quad") or_else panic("Error loading shaders")
+		glc.shader_load_from_files("quad") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(g_state.shaders.quad)
+
+	g_state.shaders.skybox =
+		glc.shader_load_from_files("skybox") or_else glc.crash("Error loading shaders")
+	defer glc.shader_delete_program(g_state.shaders.skybox)
 
 	// pos-process effects
 	g_state.post_process.effects = load_post_process_effects()
@@ -167,6 +182,9 @@ main :: proc() {
 	defer glc.primitive_destroy(&g_state.objects.cube)
 	g_state.objects.plane = glc.primitive_create(.Plane, "metal.png")
 	defer glc.primitive_destroy(&g_state.objects.plane)
+
+	g_state.background.skybox = glc.cubemap_load("sky") or_else glc.crash("Failed to load skybox")
+	defer glc.cubemap_destroy(&g_state.background.skybox)
 
 	// required when loading any model
 	defer glc.model_unload_loaded_textures_path()
@@ -226,9 +244,10 @@ draw_main_scene :: proc() {
 
 	gl.PolygonMode(gl.FRONT_AND_BACK, g_state.use_wireframe ? gl.LINE : gl.FILL)
 
-	gl.ClearColor(**g_state.background_color, 1.0)
+	if g_state.background.type == .Solid_Color {
+		gl.ClearColor(**g_state.background.color, 1.0)
+	}
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT)
-
 
 	view := glc.camera_get_view_matrix(g_state.camera)
 	proj := glm.mat4Perspective(
@@ -239,6 +258,10 @@ draw_main_scene :: proc() {
 	)
 
 	// rendering
+	if g_state.background.type == .Skybox {
+		glc.cubemap_draw(g_state.background.skybox, g_state.shaders.skybox, &view, &proj)
+	}
+
 	glc.shader_use_program(g_state.shaders.main)
 	glc.shader_uniform_set(g_state.shaders.main, "u_view", &view)
 	glc.shader_uniform_set(g_state.shaders.main, "u_projection", &proj)
@@ -292,7 +315,19 @@ draw_main_scene :: proc() {
 
 ui_render :: proc() {
 	if im.CollapsingHeader("General") {
-		im.ColorEdit3("Background Color", &g_state.background_color)
+		g_state.background.current = cast(i32)g_state.background.type
+		if im.ComboCallback(
+			"Background type",
+			&g_state.background.current,
+			get_background_type_name,
+			nil,
+			len(Background_Type),
+		) {
+			g_state.background.type = cast(Background_Type)g_state.background.current
+		}
+		if g_state.background.type == .Solid_Color {
+			im.ColorEdit3("Background Color", &g_state.background.color)
+		}
 		if im.Checkbox("Use wireframe", &g_state.use_wireframe) {
 			g_state.wireframe_toggled = true
 		}
@@ -351,9 +386,22 @@ ui_render :: proc() {
 		return DEPTH_FUNCTION_NAMES[idx]
 	}
 
-	get_post_process_effect_name :: proc "c" (_user_data: rawptr, idx: i32) -> cstring {
-		effects := cast([^]Post_Process_Effect)_user_data
+	get_post_process_effect_name :: proc "c" (user_data: rawptr, idx: i32) -> cstring {
+		effects := cast([^]Post_Process_Effect)user_data
 		return effects[idx].name
+	}
+
+	get_background_type_name :: proc "c" (_user_data: rawptr, idx: i32) -> (name: cstring) {
+		switch cast(Background_Type)idx {
+		case .Solid_Color:
+			name = "Solid Color"
+		case .Skybox:
+			name = "Skybox"
+		case:
+			assert_contextless(false, "Unhandled background type name")
+		}
+
+		return 
 	}
 }
 
@@ -500,7 +548,10 @@ load_post_process_effects :: proc(allocator := context.allocator) -> [dynamic]Po
 	return effects
 }
 
-destroy_post_process_effects :: proc(effects: []Post_Process_Effect, allocator := context.allocator) {
+destroy_post_process_effects :: proc(
+	effects: []Post_Process_Effect,
+	allocator := context.allocator,
+) {
 	for effect in effects {
 		delete(effect.name, allocator)
 		glc.shader_delete_program(effect.shader)

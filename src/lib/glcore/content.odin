@@ -18,6 +18,9 @@ CONTENT_SHADER_PATH ::
 CONTENT_IMAGE_PATH ::
 	CONTENT_BASE_PATH + "images/" when OPENGL_EXERCISES_PATH == "" else OPENGL_EXERCISES_PATH
 
+CONTENT_CUBEMAP_PATH ::
+	CONTENT_BASE_PATH + "cubemaps/" when OPENGL_EXERCISES_PATH == "" else OPENGL_EXERCISES_PATH
+
 // models are always in "content" for exercises
 CONTENT_MODEL_PATH ::
 	OPENGL_ROOT_CONTENT_PATH +
@@ -28,7 +31,21 @@ CONTENT_MODEL_PATH ::
 VERTEX_SHADER_EXT :: ".vert"
 FRAGMENT_SHADER_EXT :: ".frag"
 
+// NOTE: without some kind of descriptor, we need to hardcode this
+// order matters!
+@(rodata)
+CUBEMAP_FACES := [?]string {
+	"right.jpg",
+	"left.jpg",
+	"top.jpg",
+	"bottom.jpg",
+	"front.jpg",
+	"back.jpg",
+}
+
 Shader_Code :: distinct cstring
+
+Cubemap_Images :: [6]^image.Image
 
 Model_Path :: struct {
 	full_path: string,
@@ -39,19 +56,45 @@ content_load_image :: proc(
 	image_name: string,
 	prefix := CONTENT_IMAGE_PATH,
 ) -> (
-	content: ^image.Image,
+	image_data: ^image.Image,
 	ok: bool,
 ) {
 	image_path := strings.concatenate({prefix, image_name})
 	defer delete(image_path)
 
-	image_data, err := image.load(image_path)
+	data, err := image.load(image_path)
 	if err != nil {
 		log.errorf("Failed to load image '%s': %v", image_path, err)
 		return
 	}
+	ok = true
+	image_data = data
 
-	return image_data, true
+	return
+}
+
+content_load_cubemap_images :: proc(
+	cubemap_name: string,
+	prefix := CONTENT_CUBEMAP_PATH,
+) -> (
+	cubemap_images: Cubemap_Images,
+	ok: bool,
+) {
+	for face, i in CUBEMAP_FACES {
+		image_path := strings.concatenate({prefix, cubemap_name, "/", face})
+		defer delete(image_path)
+
+		image_data, err := image.load(image_path)
+		if err != nil {
+			log.errorf("Failed to load cubemap image '%s': %v", image_path, err)
+			return
+		}
+
+		cubemap_images[i] = image_data
+	}
+	ok = true
+
+	return
 }
 
 content_get_model_path :: proc(model_name: string) -> (model_path: Model_Path) {
@@ -67,6 +110,12 @@ content_get_model_path :: proc(model_name: string) -> (model_path: Model_Path) {
 
 content_destroy_model_path :: proc(model_path: Model_Path) {
 	delete(model_path.full_path)
+}
+
+content_destroy_cubemap_images :: proc(cubemap_images: Cubemap_Images) {
+	for image_data in cubemap_images {
+		image.destroy(image_data)
+	}
 }
 
 content_destroy_image :: proc(image_data: ^image.Image) {
