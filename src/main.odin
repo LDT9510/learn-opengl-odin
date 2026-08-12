@@ -244,6 +244,17 @@ draw_main_scene :: proc() {
 
 	gl.PolygonMode(gl.FRONT_AND_BACK, g_state.use_wireframe ? gl.LINE : gl.FILL)
 
+	if g_state.use_wireframe {
+		// force the background as solid color,
+		// NOTE: this will make the skybox unselectable in the devUI
+		g_state.background.type = .Solid_Color
+	} else {
+		g_state.background.type = .Skybox
+	}
+
+	// show the wireframe for the main scene only, not the render texture
+	defer gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
+
 	if g_state.background.type == .Solid_Color {
 		gl.ClearColor(**g_state.background.color, 1.0)
 	}
@@ -401,7 +412,7 @@ ui_render :: proc() {
 			assert_contextless(false, "Unhandled background type name")
 		}
 
-		return 
+		return
 	}
 }
 
