@@ -64,7 +64,8 @@ if %command%=="release" (
 	set opt_flags=^
 		-o:speed
 	set extra_flags=^
-		-subsystem:windows
+		-subsystem:windows^
+		-disable-assert
 )
 if %command%=="release-size" (
 	set executable=%project_name%_min.exe
@@ -72,7 +73,8 @@ if %command%=="release-size" (
 	set opt_flags=^
 		-o:size
 	set extra_flags=^
-		-subsystem:windows
+		-subsystem:windows^
+		-disable-assert
 )
 if %command%=="ex" (
 	set is_command_known=yes
