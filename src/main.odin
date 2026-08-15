@@ -16,7 +16,7 @@ import im "extern:imgui"
 import "lib:devui"
 import glc "lib:glcore"
 
-MAIN_SHADER_NAME :: "model_load"
+MAIN_SHADER_NAME :: "reflective"
 
 Background_Type :: enum {
 	Solid_Color,
@@ -45,6 +45,7 @@ g_state: struct {
 	},
 	shaders:               struct {
 		main:   glc.Shader_Program_Handle,
+		model:   glc.Shader_Program_Handle,
 		border: glc.Shader_Program_Handle,
 		quad:   glc.Shader_Program_Handle,
 		skybox: glc.Shader_Program_Handle,
@@ -52,6 +53,7 @@ g_state: struct {
 	objects:               struct {
 		cube:  glc.Primitive,
 		plane: glc.Primitive,
+		backpack: glc.Model,
 	},
 	depth:                 struct {
 		see_buffer:         bool,
@@ -132,8 +134,14 @@ main :: proc() {
 		glc.shader_load_from_files(MAIN_SHADER_NAME) or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(g_state.shaders.main)
 
+	g_state.shaders.model =
+		glc.shader_load_from_files("model_load") or_else glc.crash(
+			"Error loading shaders",
+		)
+	defer glc.shader_delete_program(g_state.shaders.model)
+
 	g_state.shaders.border =
-		glc.shader_load_from_files(MAIN_SHADER_NAME, "colored_border") or_else glc.crash(
+		glc.shader_load_from_files("model_load", "colored_border") or_else glc.crash(
 			"Error loading shaders",
 		)
 	defer glc.shader_delete_program(g_state.shaders.border)
@@ -146,18 +154,20 @@ main :: proc() {
 		glc.shader_load_from_files("skybox") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(g_state.shaders.skybox)
 
-	// pos-process effects
+	// post-process effects
 	g_state.post_process.effects = load_post_process_effects()
 	defer destroy_post_process_effects(g_state.post_process.effects[:])
 
-	// load models/primitives
-	g_state.objects.cube = glc.primitive_create(.Cube, "container.jpg")
-	defer glc.primitive_destroy(&g_state.objects.cube)
-	g_state.objects.plane = glc.primitive_create(.Plane, "metal.png")
-	defer glc.primitive_destroy(&g_state.objects.plane)
-
 	g_state.background.skybox = glc.cubemap_load("sky") or_else glc.crash("Failed to load skybox")
 	defer glc.cubemap_destroy(&g_state.background.skybox)
+
+	// load models/primitives
+	g_state.objects.backpack = glc.model_load("backpack")
+	defer glc.model_delete(&g_state.objects.backpack)
+	g_state.objects.cube = glc.primitive_create_reflective(.Cube_With_Normals, g_state.background.skybox.texture)
+	defer glc.primitive_destroy_reflective(&g_state.objects.cube)
+	g_state.objects.plane = glc.primitive_create(.Plane, "metal.png")
+	defer glc.primitive_destroy(&g_state.objects.plane)
 
 	// required when loading any model
 	defer glc.model_unload_loaded_textures_path()
@@ -243,6 +253,10 @@ draw_main_scene :: proc() {
 	glc.shader_uniform_set(g_state.shaders.main, "u_view", &view)
 	glc.shader_uniform_set(g_state.shaders.main, "u_projection", &proj)
 
+	glc.shader_use_program(g_state.shaders.model)
+	glc.shader_uniform_set(g_state.shaders.model, "u_view", &view)
+	glc.shader_uniform_set(g_state.shaders.model, "u_projection", &proj)
+
 	if g_state.depth.see_buffer {
 		glc.shader_uniform_set(g_state.shaders.main, "u_near", g_state.frustrum.near)
 		glc.shader_uniform_set(g_state.shaders.main, "u_far", g_state.frustrum.far)
@@ -251,13 +265,18 @@ draw_main_scene :: proc() {
 	// floor
 	gl.StencilMask(0x00)
 	gl.Disable(gl.CULL_FACE)
-	glc.primitive_draw(g_state.objects.plane, g_state.shaders.main, 0.0)
+	glc.primitive_draw(g_state.objects.plane, g_state.shaders.model, 0.0)
 
 	// cubes
 	gl.StencilMask(0xff)
 	gl.Disable(gl.CULL_FACE)
-	glc.primitive_draw(g_state.objects.cube, g_state.shaders.main, {2.0, 0.01, 0.0})
-	glc.primitive_draw(g_state.objects.cube, g_state.shaders.main, {-1.0, 0.01, -1.0})
+	glc.primitive_draw(g_state.objects.cube, g_state.shaders.main, {2.0, 0.01, 0.0}, camera_pos = g_state.camera.position)
+	glc.primitive_draw(g_state.objects.cube, g_state.shaders.main, {-1.0, 0.01, -1.0}, camera_pos = g_state.camera.position)
+
+	// backpack
+	gl.StencilMask(0x00)
+	gl.Disable(gl.CULL_FACE)
+	glc.model_draw(g_state.objects.backpack, g_state.shaders.main, {0.0, 2.0, 0.0}, 0.4)
 
 	// cubes outlines
 	if g_state.stencil.should_draw_border & !g_state.use_wireframe {
@@ -455,7 +474,7 @@ handle_view_modes :: proc() {
 		g_state.shaders.main = glc.shader_reload(g_state.shaders.main, MAIN_SHADER_NAME)
 	}
 
-	// hack
+	// HACK
 	@(static) original_quad_shader_backup: glc.Shader_Program_Handle
 	@(static) init_once := true
 	if init_once {

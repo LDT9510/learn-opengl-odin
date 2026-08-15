@@ -5,16 +5,21 @@ import glm "core:math/linalg/glsl"
 
 Primitive_Type :: enum {
 	Cube,
+	Cube_With_Normals,
 	Plane,
 	Quad,
 	Full_Quad,
 	Mini_Quad,
 }
 
-// while not using normals, else just use "mesh.Vertex"
 Primitive_Vertex :: struct {
 	position:   glm.vec3,
 	tex_coords: glm.vec2,
+}
+
+Primitive_Vertex_Normals :: struct {
+	position: glm.vec3,
+	normal:   glm.vec3,
 }
 
 Primitive :: struct {
@@ -77,6 +82,9 @@ _primitive_create_internal :: proc(
 	switch p_type {
 	case .Cube:
 		vertices = CUBE_VERTICES[:]
+	case .Cube_With_Normals:
+		// HACK
+		panic("Bad")
 	case .Plane:
 		vertices = PLANE_VERTICES[:]
 	case .Quad:
@@ -115,30 +123,97 @@ _primitive_create_internal :: proc(
 	return
 }
 
+primitive_create_reflective :: proc(
+	p_type: Primitive_Type,
+	environment_texture: u32,
+) -> (
+	p: Primitive,
+) {
+	vertices: []Primitive_Vertex_Normals
+	#partial switch p_type {
+	case .Cube_With_Normals:
+		vertices = CUBE_VERTICES_WITH_NORMALS[:]
+	case:
+		// HACK
+		panic("Bad")
+	}
+
+	p.type = .Cube_With_Normals
+	p.vertex_size = cast(i32)len(vertices)
+
+	gl.GenVertexArrays(1, &p.vao)
+	gl.GenBuffers(1, &p.vbo)
+	gl.BindVertexArray(p.vao)
+	gl.BindBuffer(gl.ARRAY_BUFFER, p.vbo)
+	gl.BufferData(
+		gl.ARRAY_BUFFER,
+		cast(int)p.vertex_size * size_of(Primitive_Vertex_Normals),
+		raw_data(vertices),
+		gl.STATIC_DRAW,
+	)
+	// positions
+	gl.EnableVertexAttribArray(0)
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, size_of(Primitive_Vertex_Normals), 0)
+	// normals
+	gl.EnableVertexAttribArray(1)
+	gl.VertexAttribPointer(
+		1,
+		3,
+		gl.FLOAT,
+		gl.FALSE,
+		size_of(Primitive_Vertex_Normals),
+		offset_of(Primitive_Vertex_Normals, normal),
+	)
+
+	gl.BindVertexArray(0)
+
+	p.texture = cast(Texture_Id)environment_texture
+
+	return
+}
 
 primitive_draw :: proc(
 	p: Primitive,
 	shader: Shader_Program_Handle,
 	translation: glm.vec3 = 0,
 	scale: glm.vec3 = 1,
+	camera_pos: glm.vec3 = 1,
 ) {
 	shader_use_program(shader)
+	gl.BindVertexArray(p.vao)
 
+	// mostly a HACK
 	if p.type == .Full_Quad {
 		shader_uniform_set(shader, "u_screen_texture", 0)
+
+		gl.ActiveTexture(gl.TEXTURE0)
+		gl.BindTexture(gl.TEXTURE_2D, cast(u32)p.texture)
+	} else if p.type == .Cube_With_Normals {
+
+		model_matrix := glm.mat4Translate(translation)
+		model_matrix *= glm.mat4Scale(scale)
+		shader_uniform_set(shader, "u_model", &model_matrix)
+		shader_uniform_set(shader, "u_camera_position", camera_pos)
+
 	} else {
 		shader_uniform_set(shader, "u_texture_diffuse1", 0)
 
 		model_matrix := glm.mat4Translate(translation)
 		model_matrix *= glm.mat4Scale(scale)
 		shader_uniform_set(shader, "u_model", &model_matrix)
+
+		gl.ActiveTexture(gl.TEXTURE0)
+		gl.BindTexture(gl.TEXTURE_2D, cast(u32)p.texture)
 	}
 
-	gl.BindVertexArray(p.vao)
-	gl.ActiveTexture(gl.TEXTURE0)
-	gl.BindTexture(gl.TEXTURE_2D, cast(u32)p.texture)
 
 	gl.DrawArrays(gl.TRIANGLES, 0, p.vertex_size)
+}
+
+// HACK
+primitive_destroy_reflective :: proc(p: ^Primitive) {
+	gl.DeleteVertexArrays(1, &p.vao)
+	gl.DeleteBuffers(1, &p.vbo)
 }
 
 primitive_destroy :: proc(p: ^Primitive) {
@@ -150,7 +225,7 @@ primitive_destroy :: proc(p: ^Primitive) {
 
 
 // odinfmt: disable
-/*
+	/*
     Remember: to specify vertices in a counter-clockwise winding order you need to visualize the triangle
     as if you're in front of the triangle and from that point of view, is where you set their order.
     
@@ -160,104 +235,140 @@ primitive_destroy :: proc(p: ^Primitive) {
     is correct.
 */
 @(rodata)
-CUBE_VERTICES := [?]Primitive_Vertex{
-    // positions          // texture Coords
-    // Back face
-	{{-0.5, -0.5, -0.5,},  {0.0, 0.0,},}, // Bottom-left
-	{{ 0.5,  0.5, -0.5,},  {1.0, 1.0,},}, // top-right
-    {{ 0.5, -0.5, -0.5,},  {1.0, 0.0,},}, // bottom-right         
-    {{ 0.5,  0.5, -0.5,},  {1.0, 1.0,},}, // top-right
-    {{-0.5, -0.5, -0.5,},  {0.0, 0.0,},}, // bottom-left
-    {{-0.5,  0.5, -0.5,},  {0.0, 1.0,},}, // top-left
-    // Front face
-    {{-0.5, -0.5,  0.5,},  {0.0, 0.0,},}, // bottom-left
-    {{ 0.5, -0.5,  0.5,},  {1.0, 0.0,},}, // bottom-right
-    {{ 0.5,  0.5,  0.5,},  {1.0, 1.0,},}, // top-right
-    {{ 0.5,  0.5,  0.5,},  {1.0, 1.0,},}, // top-right
-    {{-0.5,  0.5,  0.5,},  {0.0, 1.0,},}, // top-left
-    {{-0.5, -0.5,  0.5,},  {0.0, 0.0,},}, // bottom-left
-    // Left face
-    {{-0.5,  0.5,  0.5,},  {1.0, 0.0,},}, // top-right
-    {{-0.5,  0.5, -0.5,},  {1.0, 1.0,},}, // top-left
-    {{-0.5, -0.5, -0.5,},  {0.0, 1.0,},}, // bottom-left
-    {{-0.5, -0.5, -0.5,},  {0.0, 1.0,},}, // bottom-left
-    {{-0.5, -0.5,  0.5,},  {0.0, 0.0,},}, // bottom-right
-    {{-0.5,  0.5,  0.5,},  {1.0, 0.0,},}, // top-right
-    // Right face
-    {{ 0.5,  0.5,  0.5,},  {1.0, 0.0,},}, // top-left
-    {{ 0.5, -0.5, -0.5,},  {0.0, 1.0,},}, // bottom-right
-    {{ 0.5,  0.5, -0.5,},  {1.0, 1.0,},}, // top-right         
-    {{ 0.5, -0.5, -0.5,},  {0.0, 1.0,},}, // bottom-right
-    {{ 0.5,  0.5,  0.5,},  {1.0, 0.0,},}, // top-left
-    {{ 0.5, -0.5,  0.5,},  {0.0, 0.0,},}, // bottom-left     
-    // Bottom face
-    {{-0.5, -0.5, -0.5,},  {0.0, 1.0,},}, // top-right
-    {{0.5, -0.5, -0.5,},  {1.0, 1.0,},}, // top-left
-    {{0.5, -0.5,  0.5,},  {1.0, 0.0,},}, // bottom-left
-    {{0.5, -0.5,  0.5,},  {1.0, 0.0,},}, // bottom-left
-    {{-0.5, -0.5,  0.5,},  {0.0, 0.0,},}, // bottom-right
-    {{-0.5, -0.5, -0.5,},  {0.0, 1.0,},}, // top-right
-    // Top face
-    {{-0.5,  0.5, -0.5,},  {0.0, 1.0,},}, // top-left
-    {{0.5,  0.5,  0.5,},  {1.0, 0.0,},}, // bottom-right
-    {{0.5,  0.5, -0.5,},  {1.0, 1.0,},}, // top-right     
-    {{0.5,  0.5,  0.5,},  {1.0, 0.0,},}, // bottom-right
-    {{-0.5,  0.5, -0.5,},  {0.0, 1.0,},}, // top-left
-    {{-0.5,  0.5,  0.5,},  {0.0, 0.0 },}, // bottom-left     
+CUBE_VERTICES := [?]Primitive_Vertex {
+	// positions          // texture Coords
+	// Back face
+	{{-0.5, -0.5, -0.5}, {0.0, 0.0}}, // Bottom-left
+	{{0.5, 0.5, -0.5}, {1.0, 1.0}}, // top-right
+	{{0.5, -0.5, -0.5}, {1.0, 0.0}}, // bottom-right
+	{{0.5, 0.5, -0.5}, {1.0, 1.0}}, // top-right
+	{{-0.5, -0.5, -0.5}, {0.0, 0.0}}, // bottom-left
+	{{-0.5, 0.5, -0.5}, {0.0, 1.0}}, // top-left
+	// Front face
+	{{-0.5, -0.5, 0.5}, {0.0, 0.0}}, // bottom-left
+	{{0.5, -0.5, 0.5}, {1.0, 0.0}}, // bottom-right
+	{{0.5, 0.5, 0.5}, {1.0, 1.0}}, // top-right
+	{{0.5, 0.5, 0.5}, {1.0, 1.0}}, // top-right
+	{{-0.5, 0.5, 0.5}, {0.0, 1.0}}, // top-left
+	{{-0.5, -0.5, 0.5}, {0.0, 0.0}}, // bottom-left
+	// Left face
+	{{-0.5, 0.5, 0.5}, {1.0, 0.0}}, // top-right
+	{{-0.5, 0.5, -0.5}, {1.0, 1.0}}, // top-left
+	{{-0.5, -0.5, -0.5}, {0.0, 1.0}}, // bottom-left
+	{{-0.5, -0.5, -0.5}, {0.0, 1.0}}, // bottom-left
+	{{-0.5, -0.5, 0.5}, {0.0, 0.0}}, // bottom-right
+	{{-0.5, 0.5, 0.5}, {1.0, 0.0}}, // top-right
+	// Right face
+	{{0.5, 0.5, 0.5}, {1.0, 0.0}}, // top-left
+	{{0.5, -0.5, -0.5}, {0.0, 1.0}}, // bottom-right
+	{{0.5, 0.5, -0.5}, {1.0, 1.0}}, // top-right
+	{{0.5, -0.5, -0.5}, {0.0, 1.0}}, // bottom-right
+	{{0.5, 0.5, 0.5}, {1.0, 0.0}}, // top-left
+	{{0.5, -0.5, 0.5}, {0.0, 0.0}}, // bottom-left
+	// Bottom face
+	{{-0.5, -0.5, -0.5}, {0.0, 1.0}}, // top-right
+	{{0.5, -0.5, -0.5}, {1.0, 1.0}}, // top-left
+	{{0.5, -0.5, 0.5}, {1.0, 0.0}}, // bottom-left
+	{{0.5, -0.5, 0.5}, {1.0, 0.0}}, // bottom-left
+	{{-0.5, -0.5, 0.5}, {0.0, 0.0}}, // bottom-right
+	{{-0.5, -0.5, -0.5}, {0.0, 1.0}}, // top-right
+	// Top face
+	{{-0.5, 0.5, -0.5}, {0.0, 1.0}}, // top-left
+	{{0.5, 0.5, 0.5}, {1.0, 0.0}}, // bottom-right
+	{{0.5, 0.5, -0.5}, {1.0, 1.0}}, // top-right
+	{{0.5, 0.5, 0.5}, {1.0, 0.0}}, // bottom-right
+	{{-0.5, 0.5, -0.5}, {0.0, 1.0}}, // top-left
+	{{-0.5, 0.5, 0.5}, {0.0, 0.0}}, // bottom-left
+}
+@(rodata)
+CUBE_VERTICES_WITH_NORMALS := [?]Primitive_Vertex_Normals {
+	// positions          // normals
+	{{-0.5, -0.5, -0.5}, {0.0, 0.0, -1.0}},
+	{{0.5, -0.5, -0.5}, {0.0, 0.0, -1.0}},
+	{{0.5, 0.5, -0.5}, {0.0, 0.0, -1.0}},
+	{{0.5, 0.5, -0.5}, {0.0, 0.0, -1.0}},
+	{{-0.5, 0.5, -0.5}, {0.0, 0.0, -1.0}},
+	{{-0.5, -0.5, -0.5}, {0.0, 0.0, -1.0}},
+	{{-0.5, -0.5, 0.5}, {0.0, 0.0, 1.0}},
+	{{0.5, -0.5, 0.5}, {0.0, 0.0, 1.0}},
+	{{0.5, 0.5, 0.5}, {0.0, 0.0, 1.0}},
+	{{0.5, 0.5, 0.5}, {0.0, 0.0, 1.0}},
+	{{-0.5, 0.5, 0.5}, {0.0, 0.0, 1.0}},
+	{{-0.5, -0.5, 0.5}, {0.0, 0.0, 1.0}},
+	{{-0.5, 0.5, 0.5}, {-1.0, 0.0, 0.0}},
+	{{-0.5, 0.5, -0.5}, {-1.0, 0.0, 0.0}},
+	{{-0.5, -0.5, -0.5}, {-1.0, 0.0, 0.0}},
+	{{-0.5, -0.5, -0.5}, {-1.0, 0.0, 0.0}},
+	{{-0.5, -0.5, 0.5}, {-1.0, 0.0, 0.0}},
+	{{-0.5, 0.5, 0.5}, {-1.0, 0.0, 0.0}},
+	{{0.5, 0.5, 0.5}, {1.0, 0.0, 0.0}},
+	{{0.5, 0.5, -0.5}, {1.0, 0.0, 0.0}},
+	{{0.5, -0.5, -0.5}, {1.0, 0.0, 0.0}},
+	{{0.5, -0.5, -0.5}, {1.0, 0.0, 0.0}},
+	{{0.5, -0.5, 0.5}, {1.0, 0.0, 0.0}},
+	{{0.5, 0.5, 0.5}, {1.0, 0.0, 0.0}},
+	{{-0.5, -0.5, -0.5}, {0.0, -1.0, 0.0}},
+	{{0.5, -0.5, -0.5}, {0.0, -1.0, 0.0}},
+	{{0.5, -0.5, 0.5}, {0.0, -1.0, 0.0}},
+	{{0.5, -0.5, 0.5}, {0.0, -1.0, 0.0}},
+	{{-0.5, -0.5, 0.5}, {0.0, -1.0, 0.0}},
+	{{-0.5, -0.5, -0.5}, {0.0, -1.0, 0.0}},
+	{{-0.5, 0.5, -0.5}, {0.0, 1.0, 0.0}},
+	{{0.5, 0.5, -0.5}, {0.0, 1.0, 0.0}},
+	{{0.5, 0.5, 0.5}, {0.0, 1.0, 0.0}},
+	{{0.5, 0.5, 0.5}, {0.0, 1.0, 0.0}},
+	{{-0.5, 0.5, 0.5}, {0.0, 1.0, 0.0}},
+	{{-0.5, 0.5, -0.5}, {0.0, 1.0, 0.0}},
 }
 
 // should not be culled
-@rodata
-PLANE_VERTICES := [?]Primitive_Vertex{
-    // note we set the texture coordinates higher than 1 
-    // (together with GL_REPEAT as texture wrapping mode)
-    // this will cause the floor texture to repeat
-    // positions          // texture Coords
-    {{ 5.0, -0.5,  5.0,},  {2.0, 0.0,},},
-    {{-5.0, -0.5,  5.0,},  {0.0, 0.0,},},
-    {{-5.0, -0.5, -5.0,},  {0.0, 2.0,},},
-
-    {{ 5.0, -0.5,  5.0,},  {2.0, 0.0,},},
-    {{-5.0, -0.5, -5.0,},  {0.0, 2.0,},},
-    {{ 5.0, -0.5, -5.0,},  {2.0, 2.0,},},
+@(rodata)
+PLANE_VERTICES := [?]Primitive_Vertex {
+	// note we set the texture coordinates higher than 1
+	// (together with GL_REPEAT as texture wrapping mode)
+	// this will cause the floor texture to repeat
+	// positions          // texture Coords
+	{{5.0, -0.5, 5.0}, {2.0, 0.0}},
+	{{-5.0, -0.5, 5.0}, {0.0, 0.0}},
+	{{-5.0, -0.5, -5.0}, {0.0, 2.0}},
+	{{5.0, -0.5, 5.0}, {2.0, 0.0}},
+	{{-5.0, -0.5, -5.0}, {0.0, 2.0}},
+	{{5.0, -0.5, -5.0}, {2.0, 2.0}},
 }
 
 // should not be culled
-@rodata
-QUAD_VERTICES := [?]Primitive_Vertex{
-    // positions        // texture Coords
-	{{0.0,  0.5, 0.0,}, {0.0, 1.0,},},
-	{{0.0, -0.5, 0.0,}, {0.0, 0.0,},},
-	{{1.0, -0.5, 0.0,}, {1.0, 0.0,},},
-
-	{{0.0,  0.5, 0.0,}, {0.0, 1.0,},},
-	{{1.0, -0.5, 0.0,}, {1.0, 0.0,},},
-	{{1.0,  0.5, 0.0,}, {1.0, 1.0,},},
+@(rodata)
+QUAD_VERTICES := [?]Primitive_Vertex {
+	// positions        // texture Coords
+	{{0.0, 0.5, 0.0}, {0.0, 1.0}},
+	{{0.0, -0.5, 0.0}, {0.0, 0.0}},
+	{{1.0, -0.5, 0.0}, {1.0, 0.0}},
+	{{0.0, 0.5, 0.0}, {0.0, 1.0}},
+	{{1.0, -0.5, 0.0}, {1.0, 0.0}},
+	{{1.0, 0.5, 0.0}, {1.0, 1.0}},
 }
 
 // should not be culled
-@rodata
-FULL_SCREEN_QUAD_VERTICES := [?]Primitive_Vertex{
-    // positions        // texture Coords
-	{{-1.0,  1.0, 0.0,}, {0.0, 1.0,},},
-	{{-1.0, -1.0, 0.0,}, {0.0, 0.0,},},
-	{{ 1.0, -1.0, 0.0,}, {1.0, 0.0,},},
-
-	{{-1.0,  1.0, 0.0,}, {0.0, 1.0,},},
-	{{ 1.0, -1.0, 0.0,}, {1.0, 0.0,},},
-	{{ 1.0,  1.0, 0.0,}, {1.0, 1.0,},},
+@(rodata)
+FULL_SCREEN_QUAD_VERTICES := [?]Primitive_Vertex {
+	// positions        // texture Coords
+	{{-1.0, 1.0, 0.0}, {0.0, 1.0}},
+	{{-1.0, -1.0, 0.0}, {0.0, 0.0}},
+	{{1.0, -1.0, 0.0}, {1.0, 0.0}},
+	{{-1.0, 1.0, 0.0}, {0.0, 1.0}},
+	{{1.0, -1.0, 0.0}, {1.0, 0.0}},
+	{{1.0, 1.0, 0.0}, {1.0, 1.0}},
 }
 
 // should not be culled
-@rodata
-MINI_QUAD_VERTICES := [?]Primitive_Vertex{
-    // positions        // texture Coords
-	{{-0.3, 1.0, 0.0,}, {0.0, 1.0,},},
-	{{-0.3, 0.7, 0.0,}, {0.0, 0.0,},},
-	{{ 0.3, 0.7, 0.0,}, {1.0, 0.0,},},
-
-	{{-0.3, 1.0, 0.0,}, {0.0, 1.0,},},
-	{{ 0.3, 0.7, 0.0,}, {1.0, 0.0,},},
-	{{ 0.3, 1.0, 0.0,}, {1.0, 1.0,},},
+@(rodata)
+MINI_QUAD_VERTICES := [?]Primitive_Vertex {
+	// positions        // texture Coords
+	{{-0.3, 1.0, 0.0}, {0.0, 1.0}},
+	{{-0.3, 0.7, 0.0}, {0.0, 0.0}},
+	{{0.3, 0.7, 0.0}, {1.0, 0.0}},
+	{{-0.3, 1.0, 0.0}, {0.0, 1.0}},
+	{{0.3, 0.7, 0.0}, {1.0, 0.0}},
+	{{0.3, 1.0, 0.0}, {1.0, 1.0}},
 }
 // odinfmt: enable

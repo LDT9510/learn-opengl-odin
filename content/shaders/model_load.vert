@@ -11,7 +11,6 @@ uniform mat4 u_projection;
 
 void main()
 {
-    // flip the textures here instead of in the CPU
     v_tex_coords = vec2(in_tex_coords.x, in_tex_coords.y);
 
     vec3 frag_pos = vec3(u_model * vec4(in_position, 1.0));

@@ -6,6 +6,9 @@ import "core:log"
 import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 
+OPENGL_MAJOR_VERSION :: 3
+OPENGL_MINOR_VERSION :: 3
+
 WINDOW_WIDTH :: 1200
 WINDOW_HEIGHT :: 960
 
@@ -14,8 +17,8 @@ create_opengl_window :: proc() -> (window: ^sdl.Window, gl_ctx: sdl.GLContext) {
 		crash("SDL: could not initialize: %s", sdl.GetError())
 	}
 
-	sdl.GL_SetAttribute(.CONTEXT_MAJOR_VERSION, 3)
-	sdl.GL_SetAttribute(.CONTEXT_MINOR_VERSION, 3)
+	sdl.GL_SetAttribute(.CONTEXT_MAJOR_VERSION, OPENGL_MAJOR_VERSION)
+	sdl.GL_SetAttribute(.CONTEXT_MINOR_VERSION, OPENGL_MINOR_VERSION)
 	sdl.GL_SetAttribute(.CONTEXT_PROFILE_MASK, cast(c.int)sdl.GL_CONTEXT_PROFILE_CORE)
 	sdl.GL_SetAttribute(.DEPTH_SIZE, 24)
 	sdl.GL_SetAttribute(.STENCIL_SIZE, 8)
@@ -35,7 +38,7 @@ create_opengl_window :: proc() -> (window: ^sdl.Window, gl_ctx: sdl.GLContext) {
 		crash("SDL: could not create OpenGL context: %s", sdl.GetError())
 	}
 
-	gl.load_up_to(3, 3, sdl.gl_set_proc_address)
+	gl.load_up_to(OPENGL_MAJOR_VERSION, OPENGL_MINOR_VERSION, sdl.gl_set_proc_address)
 	log.infof(
 		"OpenGL: loaded OpenGL %d.%d Core Profile",
 		gl.loaded_up_to_major,

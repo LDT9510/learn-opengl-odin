@@ -460,7 +460,7 @@ handle_view_modes :: proc() {
 		g_state.shaders.main = glc.shader_reload(g_state.shaders.main, MAIN_SHADER_NAME)
 	}
 
-	// hack
+	// HACK
 	@(static) original_quad_shader_backup: glc.Shader_Program_Handle
 	@(static) init_once := true
 	if init_once {
