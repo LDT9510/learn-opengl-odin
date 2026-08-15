@@ -16,7 +16,7 @@ import im "extern:imgui"
 import "lib:devui"
 import glc "lib:glcore"
 
-MAIN_SHADER_NAME :: "reflective"
+MAIN_SHADER_NAME :: "refractive"
 
 Background_Type :: enum {
 	Solid_Color,
@@ -263,9 +263,9 @@ draw_main_scene :: proc() {
 	}
 
 	// floor
-	gl.StencilMask(0x00)
-	gl.Disable(gl.CULL_FACE)
-	glc.primitive_draw(g_state.objects.plane, g_state.shaders.model, 0.0)
+	// gl.StencilMask(0x00)
+	// gl.Disable(gl.CULL_FACE)
+	// glc.primitive_draw(g_state.objects.plane, g_state.shaders.model, 0.0)
 
 	// cubes
 	gl.StencilMask(0xff)
