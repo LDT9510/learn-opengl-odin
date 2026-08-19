@@ -9,7 +9,7 @@ import "core:sys/windows"
 import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 
-import glc "lib:glcore"
+import glc "../common/glcore"
 
 _ :: glc.OPENGL_EXERCISES_PATH // do not raise unused error
 

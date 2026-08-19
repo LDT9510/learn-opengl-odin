@@ -14,8 +14,8 @@ import im "extern:imgui"
 import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 
-import "lib:devui"
-import glc "lib:glcore"
+import "../common/devui"
+import glc "../common/glcore"
 
 MAX_POINT_LIGHTS :: 4
 
@@ -220,7 +220,7 @@ main :: proc() {
 	defer glc.destroy_opengl_window(g_state.window, gl_ctx)
 
 	devui.init_for_sdl_window(g_state.window, gl_ctx)
-	defer devui.destroy()
+	defer devui.deinit()
 
 	are_presets_loaded := load_presets_from_disk(&g_state.presets_store)
 	defer unload_presets(&g_state.presets_store)
@@ -505,7 +505,7 @@ load_shaders :: proc(
 	return
 
 	load_single :: proc(name: string) -> glc.Shader_Program_Handle {
-		shader, ok := glc.shader_load_from_files(name)
+		shader, ok := glc.shader_load(name)
 		if !ok {
 			log.errorf("Error loading shader: \"%s\"", name)
 		}

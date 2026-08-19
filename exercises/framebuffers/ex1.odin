@@ -15,8 +15,8 @@ import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 import im "extern:imgui"
 
-import "lib:devui"
-import glc "lib:glcore"
+import "../common/devui"
+import glc "../common/glcore"
 
 MAIN_SHADER_NAME :: "model_load"
 
@@ -143,21 +143,21 @@ main :: proc() {
 
 	// setup developer UI
 	devui.init_for_sdl_window(g_state.window, gl_ctx)
-	defer devui.destroy()
+	defer devui.deinit()
 
 	// load shaders
 	g_state.shaders.main =
-		glc.shader_load_from_files(MAIN_SHADER_NAME) or_else panic("Error loading shaders")
+		glc.shader_load(MAIN_SHADER_NAME) or_else panic("Error loading shaders")
 	defer glc.shader_delete_program(g_state.shaders.main)
 
 	g_state.shaders.border =
-		glc.shader_load_from_files(MAIN_SHADER_NAME, "colored_border") or_else panic(
+		glc.shader_load(MAIN_SHADER_NAME, "colored_border") or_else panic(
 			"Error loading shaders",
 		)
 	defer glc.shader_delete_program(g_state.shaders.border)
 
 	g_state.shaders.quad =
-		glc.shader_load_from_files("quad") or_else panic("Error loading shaders")
+		glc.shader_load("quad") or_else panic("Error loading shaders")
 	defer glc.shader_delete_program(g_state.shaders.quad)
 
 	// pos-process effects
@@ -267,12 +267,10 @@ draw_main_scene :: proc() {
 
 	// floor
 	gl.StencilMask(0x00)
-	gl.Disable(gl.CULL_FACE)
 	glc.primitive_draw(g_state.objects.plane, g_state.shaders.main, 0.0)
 
 	// cubes
 	gl.StencilMask(0xff)
-	gl.Disable(gl.CULL_FACE)
 	glc.primitive_draw(g_state.objects.cube, g_state.shaders.main, {2.0, 0.01, 0.0})
 	glc.primitive_draw(g_state.objects.cube, g_state.shaders.main, {-1.0, 0.01, -1.0})
 
@@ -460,7 +458,6 @@ handle_view_modes :: proc() {
 		g_state.shaders.main = glc.shader_reload(g_state.shaders.main, MAIN_SHADER_NAME)
 	}
 
-	// HACK
 	@(static) original_quad_shader_backup: glc.Shader_Program_Handle
 	@(static) init_once := true
 	if init_once {
@@ -500,7 +497,7 @@ load_post_process_effects :: proc(allocator := context.allocator) -> [dynamic]Po
 		name_with_path := strings.concatenate({"post/", filepath.stem(info.name)})
 		defer delete(name_with_path)
 
-		effect_shader, ok := glc.shader_load_from_files("quad", name_with_path)
+		effect_shader, ok := glc.shader_load("quad", name_with_path)
 
 		if !ok {
 			glc.crash("Error loading post processing effect")

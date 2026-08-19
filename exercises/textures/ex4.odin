@@ -10,8 +10,8 @@ import sdl "vendor:sdl3"
 import stbi "vendor:stb/image"
 
 import im "extern:imgui"
-import "lib:devui"
-import glc "lib:glcore"
+import "../common/devui"
+import glc "../common/glcore"
 
 // avoids unused import error when ODIN_DEBUG is 0
 _ :: mem
@@ -103,10 +103,10 @@ main :: proc() {
 	defer glc.destroy_opengl_window(window, gl_ctx)
 
 	devui.init_for_sdl_window(window, gl_ctx)
-	defer devui.destroy()
+	defer devui.deinit()
 
 	shader_program :=
-		glc.shader_load_from_files("main", "texture_mix_uniform") or_else glc.crash(
+		glc.shader_load("main", "texture_mix_uniform") or_else glc.crash(
 			"Error loading shaders",
 		)
 	defer glc.shader_delete_program(shader_program)

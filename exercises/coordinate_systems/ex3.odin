@@ -11,8 +11,8 @@ import sdl "vendor:sdl3"
 import stbi "vendor:stb/image"
 
 import im "extern:imgui"
-import "lib:devui"
-import glc "lib:glcore"
+import "../common/devui"
+import glc "../common/glcore"
 
 // avoids unused import error when ODIN_DEBUG is 0
 _ :: mem
@@ -116,14 +116,14 @@ main :: proc() {
 	defer glc.destroy_opengl_window(window, gl_ctx)
 
 	devui.init_for_sdl_window(window, gl_ctx)
-	defer devui.destroy()
+	defer devui.deinit()
 
 	g_state = {
 		ui = {fov = 45.0, aspect_ratio = glc.window_get_aspect_ratio(window)},
 		view_translation = {0, 0, -3},
 	}
 
-	shader_program := glc.shader_load_from_files("main") or_else glc.crash("Error loading shaders")
+	shader_program := glc.shader_load("main") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(shader_program)
 
 	vbo, vao: u32

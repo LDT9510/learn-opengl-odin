@@ -22,12 +22,15 @@ set warnings_flags=^
 	-strict-style
 
 set collections_flags=^
-	-collection:lib=src\lib^
-	-collection:extern=extern
+	-collection:extern=extern^
+	-collection:main=src
 
 set opt_flags=^
 	-linker:radlink^
 	-microarch:native
+
+set defines_flags=^
+	-define:CONTENT_ROOT="../"
 
 set is_command_known=no
 set build_all=no
@@ -85,7 +88,6 @@ if %command%=="ex" (
 		exit /b 1
 	)
 
-
 	if "%~3"=="" (
 		echo Missing exercise number
 		echo Usage: !usage!
@@ -107,7 +109,7 @@ if %command%=="ex" (
 	set executable=%~2_ex%~3.exe
 	set defines_flags=^
 		-define:OPENGL_EXERCISES_PATH=!exercise_section_dir!\^
-		-define:OPENGL_ROOT_CONTENT_PATH=%~dp0\
+		-define:OPENGL_ROOT_CONTENT_PATH=%~dp0
 )
 
 if %is_command_known%==no (
@@ -129,7 +131,7 @@ if not exist %output_dir% md %output_dir%
 if %build_all%==yes (
 	echo Building main program
 	%final_build_command%
-	
+
 	if not exist %output_dir%\exercises md %output_dir%\exercises
 
 	echo Building all exercices
@@ -138,10 +140,14 @@ if %build_all%==yes (
 			set exercise_file=exercises\%%~nD\%%~xnF
 			if exist !exercise_file! (
 				set output=%output_dir%\exercises\%%~nD_%%~nF.exe
-				set defines_flags=^
+				set ex_build_flags=^
+					%collections_flags%^
+					%warnings_flags%^
+					%opt_flags%^
+					%extra_flags%^
 					-define:OPENGL_EXERCISES_PATH=%~dp0exercises\%%~nD\^
 					-define:OPENGL_ROOT_CONTENT_PATH=%~dp0
-				start /b "" cmd /c "echo Building !output! && odin build !exercise_file! -file -out:!output! %build_flags% !defines_flags!"
+				start /b "" cmd /c "echo Building !output! &&  odin build !exercise_file! -file -out:!output! !ex_build_flags!"
 			)
 		)
 	)
@@ -158,17 +164,25 @@ if %build_all%==yes (
 )
 
 echo Running: %final_build_command%
+%final_build_command%
 
-if %is_debug%==no (
-	%final_build_command% && %output_dir%\%executable%
-)
-if %is_debug%==yes (
-	if %attach_debugger%==yes (
-		if not exist ./misc md ./misc 
-		%final_build_command% && raddbg %output_dir%\%executable% --project:./misc/project.raddbg
+if %ERRORLEVEL%==0 (
+	cd %output_dir%
+	if %is_debug%==no (
+		echo Running A: %executable% on %output_dir%
+		.\%executable%
 	)
-	if %attach_debugger%==no (
-		%final_build_command% && %output_dir%\%executable%
+	if %is_debug%==yes (
+		if %attach_debugger%==yes (
+			set misc_dir=%output_dir%/../misc
+			if not exist !misc_dir! md !misc_dir! 
+			echo Running: raddbg %executable% on %CD%
+			raddbg %executable% --project:!misc_dir!/project.raddbg
+		)
+		if %attach_debugger%==no (
+			echo Running: %executable% on %CD%
+			.\%executable%
+		)
 	)
 )
 

@@ -9,8 +9,8 @@ import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 
 import im "extern:imgui"
-import "lib:devui"
-import glc "lib:glcore"
+import "../common/devui"
+import glc "../common/glcore"
 
 // avoids unused import error when ODIN_DEBUG is 0
 _ :: mem
@@ -165,26 +165,26 @@ main :: proc() {
 	defer glc.destroy_opengl_window(g_state.window, gl_ctx)
 
 	devui.init_for_sdl_window(g_state.window, gl_ctx)
-	defer devui.destroy()
+	defer devui.deinit()
 
 	directional_light_shader :=
-		glc.shader_load_from_files("main", "directional_light") or_else glc.crash(
+		glc.shader_load("main", "directional_light") or_else glc.crash(
 			"Error loading shaders",
 		)
 	defer glc.shader_delete_program(directional_light_shader)
 
 	point_light_shader :=
-		glc.shader_load_from_files("main", "point_light") or_else glc.crash(
+		glc.shader_load("main", "point_light") or_else glc.crash(
 			"Error loading shaders",
 		)
 	defer glc.shader_delete_program(point_light_shader)
 
 	spot_light_shader :=
-		glc.shader_load_from_files("main", "spot_light") or_else glc.crash("Error loading shaders")
+		glc.shader_load("main", "spot_light") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(spot_light_shader)
 
 	light_cube_shader :=
-		glc.shader_load_from_files("light_cube") or_else glc.crash("Error loading shaders")
+		glc.shader_load("light_cube") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(light_cube_shader)
 
 	vbo, vao, light_vao: u32

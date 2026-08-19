@@ -20,8 +20,8 @@ import sdl "vendor:sdl3"
 import stbi "vendor:stb/image"
 
 import im "extern:imgui"
-import "lib:devui"
-import glc "lib:glcore"
+import "../common/devui"
+import glc "../common/glcore"
 
 // avoids unused import error when ODIN_DEBUG is 0
 _ :: mem
@@ -126,18 +126,18 @@ main :: proc() {
 	defer glc.destroy_opengl_window(g_state.window, gl_ctx)
 
 	devui.init_for_sdl_window(g_state.window, gl_ctx)
-	defer devui.destroy()
+	defer devui.deinit()
 
 	gouraud_shader :=
-		glc.shader_load_from_files("gouraud_shading") or_else glc.crash("Error loading shaders")
+		glc.shader_load("gouraud_shading") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(gouraud_shader)
 
 	phong_shader :=
-		glc.shader_load_from_files("phong_parameters") or_else glc.crash("Error loading shaders")
+		glc.shader_load("phong_parameters") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(phong_shader)
 
 	light_cube_shader :=
-		glc.shader_load_from_files("light_cube") or_else glc.crash("Error loading shaders")
+		glc.shader_load("light_cube") or_else glc.crash("Error loading shaders")
 	defer glc.shader_delete_program(light_cube_shader)
 
 	vbo, vao, light_vao: u32

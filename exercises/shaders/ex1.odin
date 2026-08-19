@@ -8,7 +8,7 @@ import "core:sys/windows"
 import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 
-import glc "lib:glcore"
+import glc "../common/glcore"
 
 // avoids unused import error when ODIN_DEBUG is 0
 _ :: mem
@@ -50,7 +50,7 @@ main :: proc() {
 	defer glc.destroy_opengl_window(window, gl_ctx)
 
 	shader_program :=
-		glc.shader_load_from_files("upside_down_triangle", "basic") or_else glc.crash(
+		glc.shader_load("upside_down_triangle", "basic") or_else glc.crash(
 			"Error loading shaders",
 		)
 	defer glc.shader_delete_program(shader_program)

@@ -3,7 +3,7 @@ package custom_camera
 import glm "core:math/linalg/glsl"
 
 import im "extern:imgui"
-import glc "lib:glcore"
+import glc "../../common/glcore"
 
 // odinfmt: disable
 CAMERA_DEFAULT_YAW           :: -90.0
