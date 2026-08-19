@@ -5,7 +5,6 @@ import "core:log"
 import "core:mem"
 import "core:fmt"
 import "core:image"
-import "core:slice"
 
 import sdl "vendor:sdl3"
 
