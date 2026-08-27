@@ -4,7 +4,6 @@ import ai "extern:assimp"
 
 import "core:mem"
 import "core:log"
-import glm "core:math/linalg/glsl"
 
 Model_Format :: enum {
 	Wavefront,

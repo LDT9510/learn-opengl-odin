@@ -114,57 +114,51 @@ shader_uniform_set :: proc {
 }
 
 shader_uniform_set_bool :: proc(program: Shader_Program, name: cstring, value: bool) {
-	gl.Uniform1i(gl.GetUniformLocation(cast(u32)program.id, name), cast(i32)value)
+	gl.Uniform1i(gl.GetUniformLocation(program.id, name), cast(i32)value)
 }
 
 shader_uniform_set_int32 :: proc(program: Shader_Program, name: cstring, value: i32) {
-	gl.Uniform1i(gl.GetUniformLocation(cast(u32)program.id, name), value)
+	gl.Uniform1i(gl.GetUniformLocation(program.id, name), value)
 }
 
 shader_uniform_set_float :: proc(program: Shader_Program, name: cstring, value: f32) {
-	gl.Uniform1f(gl.GetUniformLocation(cast(u32)program.id, name), value)
+	gl.Uniform1f(gl.GetUniformLocation(program.id, name), value)
 }
 
 shader_uniform_set_vec2_f :: proc(program: Shader_Program, name: cstring, x, y: f32) {
-	gl.Uniform2f(gl.GetUniformLocation(cast(u32)program.id, name), x, y)
+	gl.Uniform2f(gl.GetUniformLocation(program.id, name), x, y)
 }
 
 shader_uniform_set_vec3_f :: proc(program: Shader_Program, name: cstring, x, y, z: f32) {
-	gl.Uniform3f(gl.GetUniformLocation(cast(u32)program.id, name), x, y, z)
+	gl.Uniform3f(gl.GetUniformLocation(program.id, name), x, y, z)
 }
 
 shader_uniform_set_vec4_f :: proc(program: Shader_Program, name: cstring, x, y, z, w: f32) {
-	gl.Uniform4f(gl.GetUniformLocation(cast(u32)program.id, name), x, y, z, w)
+	gl.Uniform4f(gl.GetUniformLocation(program.id, name), x, y, z, w)
 }
 
 shader_uniform_set_vec2_v :: proc(program: Shader_Program, name: cstring, value: glm.vec2) {
-	gl.Uniform2f(gl.GetUniformLocation(cast(u32)program.id, name), value.x, value.y)
+	gl.Uniform2f(gl.GetUniformLocation(program.id, name), value.x, value.y)
 }
 
 shader_uniform_set_vec3_v :: proc(program: Shader_Program, name: cstring, value: glm.vec3) {
-	gl.Uniform3f(gl.GetUniformLocation(cast(u32)program.id, name), value.x, value.y, value.z)
+	gl.Uniform3f(gl.GetUniformLocation(program.id, name), value.x, value.y, value.z)
 }
 
 shader_uniform_set_vec4_v :: proc(program: Shader_Program, name: cstring, value: glm.vec4) {
-	gl.Uniform4f(
-		gl.GetUniformLocation(cast(u32)program.id, name),
-		value.x,
-		value.y,
-		value.z,
-		value.w,
-	)
+	gl.Uniform4f(gl.GetUniformLocation(program.id, name), value.x, value.y, value.z, value.w)
 }
 
 shader_uniform_set_mat2 :: proc(program: Shader_Program, name: cstring, value: ^glm.mat2) {
-	gl.UniformMatrix2fv(gl.GetUniformLocation(cast(u32)program.id, name), 1, false, &value[0][0])
+	gl.UniformMatrix2fv(gl.GetUniformLocation(program.id, name), 1, false, &value[0][0])
 }
 
 shader_uniform_set_mat3 :: proc(program: Shader_Program, name: cstring, value: ^glm.mat3) {
-	gl.UniformMatrix3fv(gl.GetUniformLocation(cast(u32)program.id, name), 1, false, &value[0][0])
+	gl.UniformMatrix3fv(gl.GetUniformLocation(program.id, name), 1, false, &value[0][0])
 }
 
 shader_uniform_set_mat4 :: proc(program: Shader_Program, name: cstring, value: ^glm.mat4) {
-	gl.UniformMatrix4fv(gl.GetUniformLocation(cast(u32)program.id, name), 1, false, &value[0][0])
+	gl.UniformMatrix4fv(gl.GetUniformLocation(program.id, name), 1, false, &value[0][0])
 }
 
 @(private = "file")

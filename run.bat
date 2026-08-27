@@ -10,7 +10,7 @@ set output_dir=.bin
 set input=src
 set executable=%project_name%_dev.exe
 
-set vettable_packages=%project_name%
+set vettable_packages=%project_name%,glc,devui,app
 
 set warnings_flags=^
 	-vet^
