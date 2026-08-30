@@ -29,6 +29,7 @@ setup :: proc(s: ^State) {
 
 	// setup window
 	s.app.window, s.app.gl_context = glc.create_opengl_window()
+	update_vsync_state(s)
 
 	// setup developer UI
 	devui.init_for_sdl_window(s.app.window, s.app.gl_context)
@@ -52,7 +53,7 @@ teardown :: proc(s: ^State) {
 
 update :: proc(s: ^State) {
 	events_handle(s)
-	timing_update_delta_time(&s.timings)
+	timing_update(&s.timings)
 
 	if s.app.should_reload_shaders {
 		glc.shader_reload_all_program_resources()
@@ -124,6 +125,14 @@ get_view_proj_and_frustrum :: proc(s: ^State) {
 	s.rs.frustrum.far = s.app.camera.frustrum_far
 }
 
+update_vsync_state :: proc(s: ^State) {
+	if s.app.vsync_on {
+		sdl.GL_SetSwapInterval(1)
+	} else {
+		sdl.GL_SetSwapInterval(0)
+	}
+}
+
 should_close :: proc(s: ^State) -> bool {
 	return s.app.should_close
 }
@@ -153,6 +162,7 @@ State :: struct {
 		is_capturing_mouse:    bool,
 		should_reload_shaders: bool,
 		show_ui:               bool,
+		vsync_on:              bool,
 		gl_context:            sdl.GLContext,
 	},
 	timings: Timings,

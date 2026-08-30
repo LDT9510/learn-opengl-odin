@@ -53,6 +53,16 @@ ui_sections_render :: proc(s: ^State) {
 		}
 	}
 
+	if im.CollapsingHeader("Timings", {.DefaultOpen}) {
+		if im.Checkbox("VSync", &s.app.vsync_on) {
+			update_vsync_state(s)
+		}
+		im.Text("FPS: %d", s.timings.fps)
+		im.Text("Frame time: %.2f ms", s.timings.frame_time_ms)
+	}
+
+	im.Separator()
+
 	if im.Button("Reload Shaders") {
 		s.app.should_reload_shaders = true
 	}

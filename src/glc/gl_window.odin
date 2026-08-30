@@ -56,6 +56,7 @@ create_opengl_window :: proc() -> (window: ^sdl.Window, gl_ctx: sdl.GLContext) {
 
 	gl.Viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
 
+
 	return window, gl_ctx
 }
 

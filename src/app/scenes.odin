@@ -134,7 +134,7 @@ many_cubes :: proc(s: ^State) {
 
 	// 3x3 cube matrix
 	// do some animation
-	gap := f32(abs(glm.sin(timing_get_elapsed_seconds())) + 1.0)
+	gap := abs(glm.sin(timing_get_elapsed_seconds())) + 1.0
 	side := 5
 	for i in 0 ..< side * side * side {
 		x := i % side
