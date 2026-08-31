@@ -161,19 +161,26 @@ shader_uniform_set_mat4 :: proc(program: Shader_Program, name: cstring, value: ^
 	gl.UniformMatrix4fv(gl.GetUniformLocation(program.id, name), 1, false, &value[0][0])
 }
 
+shader_ubo_bind :: proc(program: Shader_Program, ubo_name: cstring, bind_point: u32) {
+	ubo_index := gl.GetUniformBlockIndex(program.id, ubo_name)
+	gl.UniformBlockBinding(program.id, ubo_index, bind_point)
+}
+
 @(private = "file")
 g_shader_program_registry: [Shader_Program_Resource_index]Resource(Shader_Program)
 
 Vert_Shader_Code_Resource_index :: enum {
 	Pos_Norm_Tex,
 	Cubemap,
-	Quad,
+	// used by post process effects only
+	// Quad,
 }
 @(rodata)
 VERTEX_CODE_LOCATION := [Vert_Shader_Code_Resource_index]string {
 	.Pos_Norm_Tex = "pos_norm_tex",
 	.Cubemap      = "cubemap",
-	.Quad         = "quad",
+	// used by post process effects only
+	// .Quad         = "quad",
 }
 Frag_Shader_Code_Resource_Index :: enum {
 	Light_Cube,
@@ -245,6 +252,9 @@ shader_program_resource :: proc(index: Shader_Program_Resource_index) -> Shader_
 			log.panicf("Cannot load Shader Program: '%s'", program_code.name)
 		}
 
+		// set UBOs
+		shader_ubo_bind(program, "Matrices", 0)
+
 		program.name = program_code.name
 		g_shader_program_registry[index].value = program
 		g_shader_program_registry[index].is_loaded = true
@@ -260,6 +270,9 @@ shader_reload_all_program_resources :: proc() {
 			v, f := old.vertex_name, old.fragment_name
 			program, ok := shader_create_program(v, f)
 			if ok {
+				// set UBOs
+				shader_ubo_bind(program, "Matrices", 0)
+
 				program.name = old.name
 				shader_delete_program(old)
 				shader_res.value = program

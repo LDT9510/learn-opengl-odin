@@ -44,18 +44,7 @@ create_opengl_window :: proc() -> (window: ^sdl.Window, gl_ctx: sdl.GLContext) {
 		gl.loaded_up_to_minor,
 	)
 
-	loaded_renderer := gl.GetString(gl.RENDERER)
-	log.infof("OpenGL: renderer %s", loaded_renderer)
-
-	glsl_version := gl.GetString(gl.SHADING_LANGUAGE_VERSION)
-	log.infof("OpenGL: GLSL version %s", glsl_version)
-
-	max_attrs: i32
-	gl.GetIntegerv(gl.MAX_VERTEX_ATTRIBS, &max_attrs)
-	log.infof("OpenGL: Maximum number of vertex attributes supported: %d", max_attrs)
-
 	gl.Viewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
-
 
 	return window, gl_ctx
 }

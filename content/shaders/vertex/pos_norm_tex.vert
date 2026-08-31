@@ -7,9 +7,11 @@ out vec3 v_frag_pos;
 out vec3 v_normal;
 out vec2 v_tex_coords;
 
+layout(std140) uniform Matrices {
+    uniform mat4 u_projection;
+    uniform mat4 u_view;
+};
 uniform mat4 u_model;
-uniform mat4 u_view;
-uniform mat4 u_projection;
 
 void main()
 {

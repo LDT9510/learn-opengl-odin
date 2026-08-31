@@ -38,6 +38,10 @@ setup :: proc(s: ^State) {
 
 	// dynamic resources
 	glc.post_process_effects_get_available()
+
+	// renderer setup
+	glc.renderer_log_info()
+	glc.renderer_setup_ubos(&s.rs)
 }
 
 teardown :: proc(s: ^State) {

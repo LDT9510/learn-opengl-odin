@@ -5,8 +5,10 @@ out VS_OUT {
     vec3 tex_coords;
 } vs_out;
 
-uniform mat4 u_view;
-uniform mat4 u_projection;
+layout(std140) uniform Matrices {
+    uniform mat4 u_projection;
+    uniform mat4 u_view;
+};
 
 void main()
 {

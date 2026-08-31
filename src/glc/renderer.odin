@@ -34,6 +34,9 @@ Render_State :: struct {
 		near: f32,
 		far:  f32,
 	},
+	ubo:                struct {
+		matrices: u32,
+	},
 }
 
 Draw_Params :: struct {
@@ -56,6 +59,45 @@ draw_params_default :: proc(rs: ^Render_State) -> (dp: Draw_Params) {
 	dp.state = rs
 
 	return
+}
+
+renderer_log_info :: proc() {
+	loaded_renderer := gl.GetString(gl.RENDERER)
+	log.infof("OpenGL: renderer %s", loaded_renderer)
+
+	glsl_version := gl.GetString(gl.SHADING_LANGUAGE_VERSION)
+	log.infof("OpenGL: GLSL version %s", glsl_version)
+
+	max_attrs: i32
+	gl.GetIntegerv(gl.MAX_VERTEX_ATTRIBS, &max_attrs)
+	log.infof("OpenGL: Maximum number of vertex attributes supported: %d", max_attrs)
+
+	max_uniforms: i32
+	gl.GetIntegerv(gl.MAX_VERTEX_UNIFORM_COMPONENTS, &max_uniforms)
+	log.infof("OpenGL: Maximum number of vertex uniform data supported: %d", max_uniforms)
+}
+
+renderer_setup_ubos :: proc(rs: ^Render_State) {
+	gl.GenBuffers(1, &rs.ubo.matrices)
+	gl.BindBuffer(gl.UNIFORM_BUFFER, rs.ubo.matrices)
+	// reserve memory
+	gl.BufferData(gl.UNIFORM_BUFFER, 2 * size_of(glm.mat4), nil, gl.STATIC_DRAW)
+	// bind to bind point
+	gl.BindBufferRange(gl.UNIFORM_BUFFER, 0, rs.ubo.matrices, 0, 2 * size_of(glm.mat4))
+
+	gl.BindBuffer(gl.UNIFORM_BUFFER, 0)
+}
+
+renderer_update_ubos :: proc(rs: ^Render_State) {
+	gl.BindBuffer(gl.UNIFORM_BUFFER, rs.ubo.matrices)
+	// fill the buffers
+	// projection (could be done in setup if we forfeit the camera zoom, as the
+	// matrix never changes)
+	gl.BufferSubData(gl.UNIFORM_BUFFER, 0, size_of(glm.mat4), &rs.projection[0][0])
+	// view
+	gl.BufferSubData(gl.UNIFORM_BUFFER, size_of(glm.mat4), size_of(glm.mat4), &rs.view[0][0])
+
+	gl.BindBuffer(gl.UNIFORM_BUFFER, 0)
 }
 
 renderer_begin_drawing :: proc(rs: ^Render_State) {
@@ -93,10 +135,12 @@ renderer_begin_drawing :: proc(rs: ^Render_State) {
 	case:
 		gl.ClearColor(**rs.clear_color, 1.0)
 		gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
-
 	}
 
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT)
+
+	// UBOs
+	renderer_update_ubos(rs)
 }
 
 renderer_end_drawing :: proc(rs: ^Render_State) {
@@ -224,13 +268,26 @@ cubemap_draw :: proc(cubemap: Cubemap, dp: Draw_Params) {
 	cubemap_view_matrix := glm.mat4(glm.mat3(dp.state.view))
 
 	shader_use_program(dp.shader)
-	shader_uniform_set(dp.shader, "u_view", &cubemap_view_matrix)
-	shader_uniform_set(dp.shader, "u_projection", &dp.state.projection)
+
+	// NOTE: this could also be kept outside the UBO
+	// update UBO when drawing the cubemap
+	gl.BindBuffer(gl.UNIFORM_BUFFER, dp.state.ubo.matrices)
+	gl.BufferSubData(
+		gl.UNIFORM_BUFFER,
+		size_of(glm.mat4),
+		size_of(glm.mat4),
+		&cubemap_view_matrix[0][0],
+	)
 
 	gl.BindVertexArray(cubemap.vao)
 	gl.BindTexture(gl.TEXTURE_CUBE_MAP, cubemap.texture)
 	gl.DrawArrays(gl.TRIANGLES, 0, len(CUBE_VERTICES))
 	gl.BindVertexArray(0)
+
+	// UBO back to normal
+	gl.BufferSubData(gl.UNIFORM_BUFFER, size_of(glm.mat4), size_of(glm.mat4), &dp.state.view[0][0])
+
+	gl.BindBuffer(gl.UNIFORM_BUFFER, 0)
 }
 
 framebuffer_draw :: proc(fb: Framebuffer, dp: ^Draw_Params, clear := false) {
@@ -269,13 +326,9 @@ pre_draw :: proc(dp: ^Draw_Params) {
 	case .Wireframe:
 		dp.shader = shader_program_resource(.Green)
 		shader_use_program(dp.shader)
-		shader_uniform_set(dp.shader, "u_view", &dp.state.view)
-		shader_uniform_set(dp.shader, "u_projection", &dp.state.projection)
 	case .Depth:
 		dp.shader = shader_program_resource(.Depth)
 		shader_use_program(dp.shader)
-		shader_uniform_set(dp.shader, "u_view", &dp.state.view)
-		shader_uniform_set(dp.shader, "u_projection", &dp.state.projection)
 		shader_uniform_set(dp.shader, "u_near", dp.state.frustrum.near)
 		shader_uniform_set(dp.shader, "u_far", dp.state.frustrum.far)
 	}
@@ -288,8 +341,6 @@ post_draw :: proc(object: $T, dp: ^Draw_Params) {
 		dp_copy := dp^
 		outline_shader := shader_program_resource(.Outline)
 		shader_use_program(outline_shader)
-		shader_uniform_set(outline_shader, "u_view", &dp_copy.state.view)
-		shader_uniform_set(outline_shader, "u_projection", &dp_copy.state.projection)
 		shader_uniform_set(outline_shader, "u_border_color", dp_copy.outline.color)
 
 		dp_copy.scale += dp_copy.outline.size

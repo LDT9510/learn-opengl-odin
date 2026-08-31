@@ -47,14 +47,10 @@ refr_cubes_and_backpack :: proc(s: ^State) {
 
 	refract_shader := glc.shader_program_resource(.Refraction)
 	glc.shader_use_program(refract_shader)
-	glc.shader_uniform_set(refract_shader, "u_view", &dp.state.view)
-	glc.shader_uniform_set(refract_shader, "u_projection", &dp.state.projection)
 	glc.shader_uniform_set(refract_shader, "u_camera_position", s.app.camera.position)
 
 	reflect_shader := glc.shader_program_resource(.Reflection)
 	glc.shader_use_program(reflect_shader)
-	glc.shader_uniform_set(reflect_shader, "u_view", &dp.state.view)
-	glc.shader_uniform_set(reflect_shader, "u_projection", &dp.state.projection)
 	glc.shader_uniform_set(reflect_shader, "u_camera_position", s.app.camera.position)
 
 	dp_sky := glc.draw_params_default(&s.rs)
@@ -101,8 +97,6 @@ cubes_in_plane :: proc(s: ^State) {
 	dp := glc.draw_params_default(&s.rs)
 	dp.shader = shader
 	glc.shader_use_program(dp.shader)
-	glc.shader_uniform_set(dp.shader, "u_view", &dp.state.view)
-	glc.shader_uniform_set(dp.shader, "u_projection", &dp.state.projection)
 
 	dp_sky := glc.draw_params_default(&s.rs)
 	dp_sky.shader = glc.shader_program_resource(.Skybox)
@@ -135,8 +129,6 @@ many_cubes :: proc(s: ^State) {
 	dp := glc.draw_params_default(&s.rs)
 	dp.shader = shader
 	glc.shader_use_program(dp.shader)
-	glc.shader_uniform_set(dp.shader, "u_view", &dp.state.view)
-	glc.shader_uniform_set(dp.shader, "u_projection", &dp.state.projection)
 
 	// 3x3 cube matrix
 	// do some animation
@@ -179,8 +171,6 @@ grass_and_windows :: proc(s: ^State) {
 	dp := glc.draw_params_default(&s.rs)
 	dp.shader = shader
 	glc.shader_use_program(dp.shader)
-	glc.shader_uniform_set(dp.shader, "u_view", &dp.state.view)
-	glc.shader_uniform_set(dp.shader, "u_projection", &dp.state.projection)
 
 	dp.translation.x = 0.0
 	dp.translation.y = -0.01
@@ -214,8 +204,6 @@ simple_model :: proc(s: ^State) {
 	dp := glc.draw_params_default(&s.rs)
 	dp.shader = shader
 	glc.shader_use_program(dp.shader)
-	glc.shader_uniform_set(dp.shader, "u_view", &dp.state.view)
-	glc.shader_uniform_set(dp.shader, "u_projection", &dp.state.projection)
 
 	glc.draw(model, &dp)
 }
@@ -230,8 +218,6 @@ windows_relative_colors :: proc(s: ^State) {
 	dp := glc.draw_params_default(&s.rs)
 	dp.shader = shader
 	glc.shader_use_program(dp.shader)
-	glc.shader_uniform_set(dp.shader, "u_view", &dp.state.view)
-	glc.shader_uniform_set(dp.shader, "u_projection", &dp.state.projection)
 
 	glc.draw(cube, &dp)
 }
