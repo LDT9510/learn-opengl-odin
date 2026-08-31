@@ -83,6 +83,8 @@ process_key_input :: proc(s: ^State) {
 		s.app.should_close = true
 	case events_is_key_just_pressed(.U):
 		glc.renderer_state_toggle_normal(&s.rs, .Wireframe)
+	case events_is_key_just_pressed(.O):
+		glc.renderer_state_toggle_normal(&s.rs, .Points)
 	case events_is_key_just_pressed(.P):
 		glc.renderer_state_toggle_normal(&s.rs, .Depth)
 	case events_is_key_just_pressed(.I):

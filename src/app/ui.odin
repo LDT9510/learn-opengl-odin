@@ -32,6 +32,9 @@ ui_sections_render :: proc(s: ^State) {
 		if im.RadioButtonIntPtr("Wireframe (U)", vm, cast(i32)glc.Render_View_Mode.Wireframe) {
 			s.rs.view_mode = .Wireframe
 		}
+		if im.RadioButtonIntPtr("Points (O)", vm, cast(i32)glc.Render_View_Mode.Points) {
+			s.rs.view_mode = .Points
+		}
 		if im.RadioButtonIntPtr("Depth Buffer (P)", vm, cast(i32)glc.Render_View_Mode.Depth) {
 			s.rs.view_mode = .Depth
 		}

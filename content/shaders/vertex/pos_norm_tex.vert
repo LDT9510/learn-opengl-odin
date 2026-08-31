@@ -21,4 +21,7 @@ void main()
     v_tex_coords = in_tex_coords;
 
     gl_Position = u_projection * u_view * vec4(v_frag_pos, 1.0);
+
+    // the closer to the screen, the bigger the points
+    gl_PointSize = gl_Position.z;
 }

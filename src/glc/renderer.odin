@@ -12,7 +12,12 @@ Render_View_Mode :: enum {
 	Normal,
 	Post_Process,
 	Wireframe,
+	Points,
 	Depth,
+}
+
+renderer_is_debug_view_mode :: proc(vm: Render_View_Mode) -> bool {
+	return vm == .Wireframe || vm == .Depth || vm == .Points
 }
 
 Render_State :: struct {
@@ -21,9 +26,9 @@ Render_State :: struct {
 	view, projection:   glm.mat4,
 	clear_color:        glm.vec3,
 	post_process:       struct {
-		should_use:          bool,
-		idx:                 i32,
-		fb:                  Framebuffer,
+		should_use: bool,
+		idx:        i32,
+		fb:         Framebuffer,
 	},
 	frustrum:           struct {
 		near: f32,
@@ -70,17 +75,25 @@ renderer_begin_drawing :: proc(rs: ^Render_State) {
 	gl.Enable(gl.BLEND)
 	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
+	// enable gl_PointSize in vertex shader
+	gl.Enable(gl.PROGRAM_POINT_SIZE)
+
 	// the vertex data must support this, 3D applications consistently
 	// use CCW (OpenGL default) winding order, do keep track of objects
 	// that shouln't be culled, like flat quads
 	gl.Enable(gl.CULL_FACE)
 
-	if rs.view_mode == .Wireframe {
+	#partial switch rs.view_mode {
+	case .Wireframe:
 		gl.ClearColor(0.0, 0.0, 0.0, 1.0)
 		gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
-	} else {
+	case .Points:
+		gl.ClearColor(0.0, 0.0, 0.0, 1.0)
+		gl.PolygonMode(gl.FRONT_AND_BACK, gl.POINT)
+	case:
 		gl.ClearColor(**rs.clear_color, 1.0)
 		gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
+
 	}
 
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT)
@@ -88,7 +101,7 @@ renderer_begin_drawing :: proc(rs: ^Render_State) {
 
 renderer_end_drawing :: proc(rs: ^Render_State) {
 	if post_process_effect_is_active(rs^) {
-		if rs.view_mode == .Wireframe {
+		if renderer_is_debug_view_mode(rs.view_mode) {
 			gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
 		}
 
@@ -198,8 +211,7 @@ primitive_draw :: proc(p: Primitive, dp: ^Draw_Params, texture_override := Textu
 }
 
 cubemap_draw :: proc(cubemap: Cubemap, dp: Draw_Params) {
-	vm := dp.state.view_mode
-	if vm == .Wireframe || vm == .Depth {
+	if renderer_is_debug_view_mode(dp.state.view_mode) {
 		// just not consider the skybox
 		return
 	}
@@ -252,6 +264,8 @@ pre_draw :: proc(dp: ^Draw_Params) {
 
 	// debug modes
 	#partial switch dp.state.view_mode {
+	case .Points:
+		fallthrough
 	case .Wireframe:
 		dp.shader = shader_program_resource(.Green)
 		shader_use_program(dp.shader)
