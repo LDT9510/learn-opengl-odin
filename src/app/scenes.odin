@@ -4,6 +4,7 @@ import "main:glc"
 
 import "core:slice"
 import glm "core:math/linalg/glsl"
+import gl "vendor:OpenGL"
 
 @(rodata)
 SCENE_REGISTRY := [Scene_Index]Scene {
@@ -19,6 +20,10 @@ SCENE_REGISTRY := [Scene_Index]Scene {
 	.Many_Cubes                   = {"Many Cubes", many_cubes},
 	.Grass_And_Windows            = {"Grass and transparent windows", grass_and_windows},
 	.Simple_Model                 = {"Simple Model", simple_model},
+	.Window_Relative              = {
+		"Color specific to screen space position",
+		windows_relative_colors,
+	},
 }
 
 Scene_Index :: enum {
@@ -28,6 +33,7 @@ Scene_Index :: enum {
 	Many_Cubes,
 	Grass_And_Windows,
 	Simple_Model,
+	Window_Relative,
 }
 
 Scene :: struct {
@@ -212,4 +218,20 @@ simple_model :: proc(s: ^State) {
 	glc.shader_uniform_set(dp.shader, "u_projection", &dp.state.projection)
 
 	glc.draw(model, &dp)
+}
+
+@(private)
+windows_relative_colors :: proc(s: ^State) {
+	// disable to see the back face modified by `gl_FrontFacing` 
+	gl.Disable(gl.CULL_FACE)
+
+	cube := glc.primitive_resource(.Cube)
+	shader := glc.shader_program_resource(.Win_Rel)
+	dp := glc.draw_params_default(&s.rs)
+	dp.shader = shader
+	glc.shader_use_program(dp.shader)
+	glc.shader_uniform_set(dp.shader, "u_view", &dp.state.view)
+	glc.shader_uniform_set(dp.shader, "u_projection", &dp.state.projection)
+
+	glc.draw(cube, &dp)
 }

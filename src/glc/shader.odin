@@ -186,6 +186,7 @@ Frag_Shader_Code_Resource_Index :: enum {
 	Magenta,
 	Depth,
 	Green,
+	Win_Rel,
 }
 @(rodata)
 FRAGMENT_CODE_LOCATION := [Frag_Shader_Code_Resource_Index]string {
@@ -196,6 +197,7 @@ FRAGMENT_CODE_LOCATION := [Frag_Shader_Code_Resource_Index]string {
 	.Refractive = "refractive",
 	.Skybox     = "skybox",
 	.Outline    = "colored_outline",
+	.Win_Rel    = "window_relative_color",
 	.Magenta    = "debug/magenta",
 	.Depth      = "debug/depth",
 	.Green      = "debug/green",
@@ -215,6 +217,7 @@ Shader_Program_Resource_index :: enum {
 	Outline,
 	Green,
 	Depth,
+	Win_Rel,
 }
 
 shader_program_resource :: proc(index: Shader_Program_Resource_index) -> Shader_Program {
@@ -225,6 +228,7 @@ shader_program_resource :: proc(index: Shader_Program_Resource_index) -> Shader_
 		.Refraction     = {"refraction", .Pos_Norm_Tex, .Refractive},
 		.Skybox         = {"cubemap", .Cubemap, .Skybox},
 		.Magenta        = {"magenta", .Pos_Norm_Tex, .Magenta},
+		.Win_Rel        = {"win_rel", .Pos_Norm_Tex, .Win_Rel},
 		.Green          = {"green", .Pos_Norm_Tex, .Green},
 		.Outline        = {"outline", .Pos_Norm_Tex, .Outline},
 		.Depth          = {"depth", .Pos_Norm_Tex, .Depth},
