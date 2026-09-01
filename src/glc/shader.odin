@@ -14,12 +14,14 @@ Shader_Program :: struct {
 	name:          string,
 	vertex_name:   string,
 	fragment_name: string,
+	geometry_name: string,
 	id:            u32,
 }
 
 Shader_Type :: enum u32 {
 	Vertex   = gl.VERTEX_SHADER,
 	Fragment = gl.FRAGMENT_SHADER,
+	Geometry = gl.GEOMETRY_SHADER,
 }
 
 shader_create_program :: proc {
@@ -31,6 +33,7 @@ shader_create_program :: proc {
 shader_create_program_from_stages :: proc(
 	vertex: Shader_Stage,
 	fragment: Shader_Stage,
+	geometry: Maybe(Shader_Stage) = nil,
 ) -> (
 	program: Shader_Program,
 	ok: bool,
@@ -42,6 +45,13 @@ shader_create_program_from_stages :: proc(
 	program.id = gl.CreateProgram()
 	gl.AttachShader(program.id, vertex.id)
 	gl.AttachShader(program.id, fragment.id)
+
+	geom, geom_ok := geometry.?
+	if geom_ok {
+		program.geometry_name = geom.name
+		gl.AttachShader(program.id, geom.id)
+	}
+
 	gl.LinkProgram(program.id)
 	gl.GetProgramiv(program.id, gl.LINK_STATUS, &success)
 	if success != 1 {
@@ -57,6 +67,7 @@ shader_create_program_from_stages :: proc(
 shader_create_program_from_code :: proc(
 	vertex_code: Content_Shader_Data,
 	fragment_code: Content_Shader_Data,
+	geometry_code: Maybe(Content_Shader_Data) = nil,
 ) -> (
 	program: Shader_Program,
 	ok: bool,
@@ -64,24 +75,41 @@ shader_create_program_from_code :: proc(
 	vertex := shader_create_stage(vertex_code, .Vertex) or_return
 	fragment := shader_create_stage(fragment_code, .Fragment) or_return
 
-	return shader_create_program_from_stages(vertex, fragment)
+	geometry: Maybe(Shader_Stage)
+	geom, geom_ok := geometry_code.?
+	if geom_ok {
+		geometry = shader_create_stage(geom, .Geometry) or_return
+	}
+
+	return shader_create_program_from_stages(vertex, fragment, geometry)
 }
 
 shader_create_program_from_content :: proc(
 	vertex_file_name: string,
 	fragment_file_name: string,
+	geometry_file_name: Maybe(string) = nil,
 ) -> (
 	program_id: Shader_Program,
 	ok: bool,
 ) {
 	vertex_code := content_load_shader_code(vertex_file_name, .Vertex) or_return
 	fragment_code := content_load_shader_code(fragment_file_name, .Fragment) or_return
+
+	geometry_code: Maybe(Content_Shader_Data)
+	geom, geom_ok := geometry_file_name.?
+	if geom_ok {
+		geometry_code = content_load_shader_code(geom, .Geometry) or_return
+	}
+
 	defer {
 		content_destroy_shader_data(vertex_code)
 		content_destroy_shader_data(fragment_code)
+		if geom_ok {
+			content_destroy_shader_data(geometry_code.?)
+		}
 	}
 
-	return shader_create_program_from_code(vertex_code, fragment_code)
+	return shader_create_program_from_code(vertex_code, fragment_code, geometry_code)
 }
 
 shader_use_program :: proc(program: Shader_Program) {
@@ -172,6 +200,7 @@ g_shader_program_registry: [Shader_Program_Resource_index]Resource(Shader_Progra
 Vert_Shader_Code_Resource_index :: enum {
 	Pos_Norm_Tex,
 	Cubemap,
+	Points,
 	// used by post process effects only
 	// Quad,
 }
@@ -179,9 +208,11 @@ Vert_Shader_Code_Resource_index :: enum {
 VERTEX_CODE_LOCATION := [Vert_Shader_Code_Resource_index]string {
 	.Pos_Norm_Tex = "pos_norm_tex",
 	.Cubemap      = "cubemap",
+	.Points       = "points",
 	// used by post process effects only
 	// .Quad         = "quad",
 }
+
 Frag_Shader_Code_Resource_Index :: enum {
 	Light_Cube,
 	UV_Map,
@@ -205,15 +236,24 @@ FRAGMENT_CODE_LOCATION := [Frag_Shader_Code_Resource_Index]string {
 	.Skybox     = "skybox",
 	.Outline    = "colored_outline",
 	.Win_Rel    = "window_relative_color",
-	.Magenta    = "debug/magenta",
-	.Depth      = "debug/depth",
-	.Green      = "debug/green",
+	.Magenta    = "magenta",
+	.Depth      = "depth",
+	.Green      = "green",
+}
+
+Geom_Shader_Code_Resource_Index :: enum {
+	Basic,
+}
+@(rodata)
+GEOMETRY_CODE_LOCATION := [Geom_Shader_Code_Resource_Index]string {
+	.Basic = "basic",
 }
 
 Shader_Program_Code :: struct {
 	name:         string,
 	vertex_idx:   Vert_Shader_Code_Resource_index,
 	fragment_idx: Frag_Shader_Code_Resource_Index,
+	geometry_idx: Maybe(Geom_Shader_Code_Resource_Index),
 }
 Shader_Program_Resource_index :: enum {
 	Simple_Texture,
@@ -225,20 +265,22 @@ Shader_Program_Resource_index :: enum {
 	Green,
 	Depth,
 	Win_Rel,
+	Geom_Demo,
 }
 
 shader_program_resource :: proc(index: Shader_Program_Resource_index) -> Shader_Program {
 	@(static, rodata)
 	PROGRAM_CODE := [Shader_Program_Resource_index]Shader_Program_Code {
-		.Simple_Texture = {"simple_texture", .Pos_Norm_Tex, .UV_Map},
-		.Reflection     = {"reflection", .Pos_Norm_Tex, .Reflective},
-		.Refraction     = {"refraction", .Pos_Norm_Tex, .Refractive},
-		.Skybox         = {"cubemap", .Cubemap, .Skybox},
-		.Magenta        = {"magenta", .Pos_Norm_Tex, .Magenta},
-		.Win_Rel        = {"win_rel", .Pos_Norm_Tex, .Win_Rel},
-		.Green          = {"green", .Pos_Norm_Tex, .Green},
-		.Outline        = {"outline", .Pos_Norm_Tex, .Outline},
-		.Depth          = {"depth", .Pos_Norm_Tex, .Depth},
+		.Simple_Texture = {"simple_texture", .Pos_Norm_Tex, .UV_Map, nil},
+		.Reflection     = {"reflection", .Pos_Norm_Tex, .Reflective, nil},
+		.Refraction     = {"refraction", .Pos_Norm_Tex, .Refractive, nil},
+		.Skybox         = {"cubemap", .Cubemap, .Skybox, nil},
+		.Magenta        = {"magenta", .Pos_Norm_Tex, .Magenta, nil},
+		.Win_Rel        = {"win_rel", .Pos_Norm_Tex, .Win_Rel, nil},
+		.Green          = {"green", .Pos_Norm_Tex, .Green, nil},
+		.Outline        = {"outline", .Pos_Norm_Tex, .Outline, nil},
+		.Depth          = {"depth", .Pos_Norm_Tex, .Depth, nil},
+		.Geom_Demo      = {"geom_demo", .Points, .Green, .Basic},
 	}
 
 	if !g_shader_program_registry[index].is_loaded {
@@ -246,8 +288,12 @@ shader_program_resource :: proc(index: Shader_Program_Resource_index) -> Shader_
 		log.debugf("Loading Shader Program: '%s'", program_code.name)
 		vertex := VERTEX_CODE_LOCATION[program_code.vertex_idx]
 		fragment := FRAGMENT_CODE_LOCATION[program_code.fragment_idx]
+		geometry: Maybe(string)
+		if program_code.geometry_idx != nil {
+			geometry = GEOMETRY_CODE_LOCATION[program_code.geometry_idx.?]
+		}
 
-		program, ok := shader_create_program(vertex, fragment)
+		program, ok := shader_create_program(vertex, fragment, geometry)
 		if !ok {
 			log.panicf("Cannot load Shader Program: '%s'", program_code.name)
 		}
@@ -311,10 +357,21 @@ shader_create_stage :: proc(
 	if success != 1 {
 		info_log: [512]c.char
 		gl.GetShaderInfoLog(shader.id, size_of(info_log), nil, &info_log[0])
-		shader_type_name := type == .Vertex ? "Vertex" : "Fragment"
+
+		shader_type_name: string
+		switch type {
+		case .Vertex:
+			shader_type_name = "Vertex"
+		case .Fragment:
+			shader_type_name = "Fragment"
+		case .Geometry:
+			shader_type_name = "Geometry"
+		}
+
 		log.errorf(
-			"%s shader compilation error: \n\t\t\t%s",
+			"%s shader '%s' compilation error: \n\t\t\t%s",
 			shader_type_name,
+			shader.name,
 			cast(cstring)&info_log[0],
 		)
 		return

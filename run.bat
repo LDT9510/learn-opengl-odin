@@ -64,20 +64,20 @@ if %command%=="debug" (
 if %command%=="release" (
 	set executable=%project_name%.exe
 	set is_command_known=yes
-	set opt_flags=^
-		-o:speed
+
+	if "%~2"=="" (
+		set opt_flags=^
+			-o:speed
+	)
+	if "%~2"=="size" (
+		set executable=%project_name%_min.exe
+		set opt_flags=^
+			-o:size
+	)
 	set extra_flags=^
 		-subsystem:windows^
-		-disable-assert
-)
-if %command%=="release-size" (
-	set executable=%project_name%_min.exe
-	set is_command_known=yes
-	set opt_flags=^
-		-o:size
-	set extra_flags=^
-		-subsystem:windows^
-		-disable-assert
+		-disable-assert^
+		-no-type-assert
 )
 if %command%=="ex" (
 	set is_command_known=yes

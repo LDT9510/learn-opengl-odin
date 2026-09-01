@@ -176,6 +176,7 @@ draw :: proc {
 	model_draw,
 	mesh_draw,
 	primitive_draw,
+	points_primitive_draw,
 	cubemap_draw,
 }
 
@@ -226,6 +227,13 @@ mesh_draw :: proc(mesh: Mesh, dp: ^Draw_Params) {
 	post_draw(mesh, dp)
 }
 
+points_primitive_draw :: proc(p: Primitive, shader: Shader_Program) {
+	shader_use_program(shader)
+
+	gl.BindVertexArray(p.vao)
+	gl.DrawArrays(gl.POINTS, 0, 4)
+}
+
 primitive_draw :: proc(p: Primitive, dp: ^Draw_Params, texture_override := Texture_Id(0)) {
 	pre_draw(dp)
 
@@ -249,7 +257,7 @@ primitive_draw :: proc(p: Primitive, dp: ^Draw_Params, texture_override := Textu
 	}
 
 	gl.BindVertexArray(p.vao)
-	gl.DrawArrays(gl.TRIANGLES, 0, p.vertex_size)
+	gl.DrawArrays(gl.TRIANGLES, 0, cast(i32)p.vertex_size)
 
 	post_draw(p, dp)
 }
@@ -308,7 +316,7 @@ framebuffer_draw :: proc(fb: Framebuffer, dp: ^Draw_Params, clear := false) {
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 	}
 
-	gl.DrawArrays(gl.TRIANGLES, 0, fb.primitive.vertex_size)
+	gl.DrawArrays(gl.TRIANGLES, 0, cast(i32)fb.primitive.vertex_size)
 }
 
 pre_draw :: proc(dp: ^Draw_Params) {

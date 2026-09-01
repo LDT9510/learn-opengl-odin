@@ -9,6 +9,10 @@ Vertex :: struct {
 	tex_coords: glm.vec2,
 }
 
+Point2D_Vertex :: struct {
+	positions: glm.vec2,
+}
+
 Mesh :: struct {
 	vertices:      [dynamic]Vertex,
 	indices:       [dynamic]u32,

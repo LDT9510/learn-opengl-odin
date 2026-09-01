@@ -12,6 +12,7 @@ CONTENT_ROOT :: #config(CONTENT_ROOT, "./")
 CONTENT_BASE_PATH :: CONTENT_ROOT + "content/"
 CONTENT_VERTEX_SHADER_PATH :: CONTENT_BASE_PATH + "shaders/vertex/"
 CONTENT_FRAGMENT_SHADER_PATH :: CONTENT_BASE_PATH + "shaders/fragment/"
+CONTENT_GEOMETRY_SHADER_PATH :: CONTENT_BASE_PATH + "shaders/geometry/"
 CONTENT_IMAGE_PATH :: CONTENT_BASE_PATH + "images/"
 CONTENT_CUBEMAP_PATH :: CONTENT_BASE_PATH + "cubemaps/"
 CONTENT_MODEL_PATH :: CONTENT_BASE_PATH + "models/"
@@ -128,6 +129,8 @@ content_load_shader_code :: proc(
 		extension, base_path = ".vert", CONTENT_VERTEX_SHADER_PATH
 	case .Fragment:
 		extension, base_path = ".frag", CONTENT_FRAGMENT_SHADER_PATH
+	case .Geometry:
+		extension, base_path = ".geom", CONTENT_GEOMETRY_SHADER_PATH
 	}
 
 	file_path := strings.concatenate({base_path, shader_name, extension})

@@ -24,6 +24,7 @@ SCENE_REGISTRY := [Scene_Index]Scene {
 		"Color specific to screen space position",
 		windows_relative_colors,
 	},
+	.Geometry_Shaders             = {"Using geometry shaders", geometry_shaders_showcase},
 }
 
 Scene_Index :: enum {
@@ -34,6 +35,7 @@ Scene_Index :: enum {
 	Grass_And_Windows,
 	Simple_Model,
 	Window_Relative,
+	Geometry_Shaders,
 }
 
 Scene :: struct {
@@ -210,7 +212,7 @@ simple_model :: proc(s: ^State) {
 
 @(private)
 windows_relative_colors :: proc(s: ^State) {
-	// disable to see the back face modified by `gl_FrontFacing` 
+	// disable to see the back face modified by `gl_FrontFacing`
 	gl.Disable(gl.CULL_FACE)
 
 	cube := glc.primitive_resource(.Cube)
@@ -220,4 +222,10 @@ windows_relative_colors :: proc(s: ^State) {
 	glc.shader_use_program(dp.shader)
 
 	glc.draw(cube, &dp)
+}
+
+@(private)
+geometry_shaders_showcase :: proc(s: ^State) {
+	points := glc.primitive_resource(.Points)
+	glc.draw(points, glc.shader_program_resource(.Geom_Demo))
 }

@@ -10,13 +10,36 @@ Primitive_Type :: enum {
 	Quad,
 	Full_Quad,
 	Mini_Quad,
+	Points,
 }
 
 Primitive :: struct {
 	vao, vbo:    u32,
 	texture:     Texture_Id,
-	vertex_size: i32,
+	vertex_size: int,
 	type:        Primitive_Type,
+}
+
+primitive_create_points :: proc() -> (p: Primitive) {
+	p.type = .Points
+	p.vertex_size = len(POINTS)
+
+	gl.GenVertexArrays(1, &p.vao)
+	gl.GenBuffers(1, &p.vbo)
+	gl.BindVertexArray(p.vao)
+	gl.BindBuffer(gl.ARRAY_BUFFER, p.vbo)
+	gl.BufferData(
+		gl.ARRAY_BUFFER,
+		p.vertex_size * size_of(Point2D_Vertex),
+		&POINTS[0],
+		gl.STATIC_DRAW,
+	)
+
+	gl.EnableVertexAttribArray(0)
+	gl.VertexAttribPointer(0, 2, gl.FLOAT, gl.FALSE, size_of(Point2D_Vertex), 0)
+	gl.BindVertexArray(0)
+
+	return
 }
 
 primitive_create :: proc {
@@ -72,10 +95,11 @@ _primitive_create_internal :: proc(
 ) -> (
 	p: Primitive,
 ) {
-	p.type = p_type
 
 	vertices: []Vertex
 	switch p_type {
+	case .Points:
+		return primitive_create_points()
 	case .Cube:
 		vertices = CUBE_VERTICES[:]
 	case .Plane:
@@ -88,7 +112,8 @@ _primitive_create_internal :: proc(
 		vertices = MINI_QUAD_VERTICES[:]
 	}
 
-	p.vertex_size = cast(i32)len(vertices)
+	p.type = p_type
+	p.vertex_size = len(vertices)
 
 	gl.GenVertexArrays(1, &p.vao)
 	gl.GenBuffers(1, &p.vbo)
@@ -96,7 +121,7 @@ _primitive_create_internal :: proc(
 	gl.BindBuffer(gl.ARRAY_BUFFER, p.vbo)
 	gl.BufferData(
 		gl.ARRAY_BUFFER,
-		cast(int)p.vertex_size * size_of(Vertex),
+		p.vertex_size * size_of(Vertex),
 		raw_data(vertices),
 		gl.STATIC_DRAW,
 	)
@@ -258,5 +283,12 @@ MINI_QUAD_VERTICES := [?]Vertex {
 	{{0.3, 1.0, 0.0},  {0.0, 0.0, 0.0}, {1.0, 1.0}},
 }
 
+@(rodata)
+POINTS := [?]Point2D_Vertex {
+	{{-0.5,  0.5}},
+	{{0.5,   0.5}},
+	{{0.5,  -0.5}},
+	{{-0.5, -0.5}},
+}
 
 // odinfmt: enable
