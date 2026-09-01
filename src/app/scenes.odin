@@ -6,6 +6,18 @@ import "core:slice"
 import glm "core:math/linalg/glsl"
 import gl "vendor:OpenGL"
 
+Scene_Index :: enum {
+	Empty,
+	Reflection_and_Refraction,
+	Outlined_Cubes_Plane_Windows,
+	Many_Cubes,
+	Grass_And_Windows,
+	Simple_Model,
+	Window_Relative,
+	Geometry_Shaders,
+	Exploding,
+}
+
 @(rodata)
 SCENE_REGISTRY := [Scene_Index]Scene {
 	.Empty                        = {"Empty", proc(_: ^State) {}},
@@ -25,17 +37,7 @@ SCENE_REGISTRY := [Scene_Index]Scene {
 		windows_relative_colors,
 	},
 	.Geometry_Shaders             = {"Using geometry shaders", geometry_shaders_showcase},
-}
-
-Scene_Index :: enum {
-	Empty,
-	Reflection_and_Refraction,
-	Outlined_Cubes_Plane_Windows,
-	Many_Cubes,
-	Grass_And_Windows,
-	Simple_Model,
-	Window_Relative,
-	Geometry_Shaders,
+	.Exploding                    = {"Exploding objects", exploding_objects},
 }
 
 Scene :: struct {
@@ -202,10 +204,8 @@ grass_and_windows :: proc(s: ^State) {
 @(private)
 simple_model :: proc(s: ^State) {
 	model := glc.model_resource(.Backpack)
-	shader := glc.shader_program_resource(.Simple_Texture)
 	dp := glc.draw_params_default(&s.rs)
-	dp.shader = shader
-	glc.shader_use_program(dp.shader)
+	dp.shader = glc.shader_program_resource(.Simple_Texture)
 
 	glc.draw(model, &dp)
 }
@@ -228,4 +228,22 @@ windows_relative_colors :: proc(s: ^State) {
 geometry_shaders_showcase :: proc(s: ^State) {
 	points := glc.primitive_resource(.Points)
 	glc.draw(points, glc.shader_program_resource(.Geom_Demo))
+}
+
+@(private)
+exploding_objects :: proc(s: ^State) {
+	// to see all the parts
+	gl.Disable(gl.CULL_FACE)
+
+	model := glc.model_resource(.Backpack)
+	cube := glc.primitive_resource(.Cube)
+	container_tex := glc.texture_resource(.Container)
+	dp := glc.draw_params_default(&s.rs)
+	dp.shader = glc.shader_program_resource(.Exploding)
+	glc.shader_uniform_set(dp.shader, "u_time", timing_get_elapsed_seconds())
+
+	glc.draw(model, &dp)
+
+	dp.translation.y = 5.0
+	glc.draw(cube, &dp, container_tex)
 }

@@ -216,6 +216,7 @@ VERTEX_CODE_LOCATION := [Vert_Shader_Code_Resource_index]string {
 Frag_Shader_Code_Resource_Index :: enum {
 	Light_Cube,
 	UV_Map,
+	UV_Map2,
 	Phong,
 	Reflective,
 	Refractive,
@@ -231,6 +232,7 @@ Frag_Shader_Code_Resource_Index :: enum {
 FRAGMENT_CODE_LOCATION := [Frag_Shader_Code_Resource_Index]string {
 	.Light_Cube = "light_cube",
 	.UV_Map     = "uv_map",
+	.UV_Map2    = "uv_map2",
 	.Phong      = "phong",
 	.Reflective = "reflective",
 	.Refractive = "refractive",
@@ -245,10 +247,12 @@ FRAGMENT_CODE_LOCATION := [Frag_Shader_Code_Resource_Index]string {
 
 Geom_Shader_Code_Resource_Index :: enum {
 	Basic,
+	Explode,
 }
 @(rodata)
 GEOMETRY_CODE_LOCATION := [Geom_Shader_Code_Resource_Index]string {
-	.Basic = "basic",
+	.Basic   = "basic",
+	.Explode = "explode",
 }
 
 Shader_Program_Code :: struct {
@@ -268,6 +272,7 @@ Shader_Program_Resource_index :: enum {
 	Depth,
 	Win_Rel,
 	Geom_Demo,
+	Exploding,
 }
 
 shader_program_resource :: proc(index: Shader_Program_Resource_index) -> Shader_Program {
@@ -283,6 +288,7 @@ shader_program_resource :: proc(index: Shader_Program_Resource_index) -> Shader_
 		.Outline        = {"outline", .Pos_Norm_Tex, .Outline, nil},
 		.Depth          = {"depth", .Pos_Norm_Tex, .Depth, nil},
 		.Geom_Demo      = {"geom_demo", .Points, .Color, .Basic},
+		.Exploding      = {"exploding", .Pos_Norm_Tex, .UV_Map2, .Explode},
 	}
 
 	if !g_shader_program_registry[index].is_loaded {
