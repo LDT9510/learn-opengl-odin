@@ -46,11 +46,12 @@ Render_State :: struct {
 }
 
 Draw_Params :: struct {
-	state:       ^Render_State,
-	shader:      Shader_Program,
-	translation: glm.vec3,
-	scale:       glm.vec3,
-	effect:      Post_Draw_Effect,
+	state:         ^Render_State,
+	shader:        Shader_Program,
+	translation:   glm.vec3,
+	scale:         glm.vec3,
+	effect:        Post_Draw_Effect,
+	num_instances: int,
 }
 
 dpd :: proc(rs: ^Render_State) -> (dp: Draw_Params) {
@@ -257,7 +258,12 @@ primitive_draw :: proc(p: Primitive, dp: ^Draw_Params, texture_override := Textu
 	}
 
 	gl.BindVertexArray(p.vao)
-	gl.DrawArrays(gl.TRIANGLES, 0, cast(i32)p.vertex_size)
+
+	if dp.num_instances > 0 {
+		gl.DrawArraysInstanced(gl.TRIANGLES, 0, cast(i32)p.vertex_size, cast(i32)dp.num_instances)
+	} else {
+		gl.DrawArrays(gl.TRIANGLES, 0, cast(i32)p.vertex_size)
+	}
 
 	post_draw(p, dp)
 }

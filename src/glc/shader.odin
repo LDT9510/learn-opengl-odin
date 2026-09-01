@@ -199,6 +199,7 @@ g_shader_program_registry: [Shader_Program_Resource_index]Resource(Shader_Progra
 
 Vert_Shader_Code_Resource_index :: enum {
 	Pos_Norm_Tex,
+	Pos_Norm_Tex_Inst,
 	Cubemap,
 	Points,
 	Normals,
@@ -207,10 +208,11 @@ Vert_Shader_Code_Resource_index :: enum {
 }
 @(rodata)
 VERTEX_CODE_LOCATION := [Vert_Shader_Code_Resource_index]string {
-	.Pos_Norm_Tex = "pos_norm_tex",
-	.Cubemap      = "cubemap",
-	.Points       = "points",
-	.Normals      = "normals",
+	.Pos_Norm_Tex      = "pos_norm_tex",
+	.Pos_Norm_Tex_Inst = "pos_norm_tex_instanced",
+	.Cubemap           = "cubemap",
+	.Points            = "points",
+	.Normals           = "normals",
 	// used by post process effects only
 	// .Quad         = "quad",
 }
@@ -280,6 +282,7 @@ Shader_Program_Resource_index :: enum {
 	Geom_Demo,
 	Exploding,
 	Normals,
+	Instancing,
 }
 
 shader_program_resource :: proc(index: Shader_Program_Resource_index) -> Shader_Program {
@@ -297,6 +300,7 @@ shader_program_resource :: proc(index: Shader_Program_Resource_index) -> Shader_
 		.Geom_Demo      = {"geom_demo", .Points, .Color, .Basic},
 		.Exploding      = {"exploding", .Pos_Norm_Tex, .UV_Map2, .Explode},
 		.Normals        = {"normal", .Normals, .Yellow, .Normals},
+		.Instancing     = {"instancing", .Pos_Norm_Tex_Inst, .UV_Map, nil},
 	}
 
 	if !g_shader_program_registry[index].is_loaded {

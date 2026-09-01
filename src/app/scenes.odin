@@ -3,6 +3,7 @@ package app
 import "main:glc"
 
 import "core:slice"
+import "core:fmt"
 import glm "core:math/linalg/glsl"
 import gl "vendor:OpenGL"
 
@@ -16,6 +17,7 @@ Scene_Index :: enum {
 	Window_Relative,
 	Geometry_Shaders,
 	Exploding,
+	Instanced,
 }
 
 @(rodata)
@@ -38,6 +40,7 @@ SCENE_REGISTRY := [Scene_Index]Scene {
 	},
 	.Geometry_Shaders             = {"Using geometry shaders", geometry_shaders_showcase},
 	.Exploding                    = {"Exploding objects", exploding_objects},
+	.Instanced                    = {"Instanced boxes", instanced_boxes},
 }
 
 Scene :: struct {
@@ -251,5 +254,29 @@ exploding_objects :: proc(s: ^State) {
 	glc.draw(model, &dp)
 
 	dp.translation.y = 5.0
+	glc.draw(cube, &dp, container_tex)
+}
+
+
+@(private)
+instanced_boxes :: proc(s: ^State) {
+	translations := [100]glm.vec3{}
+	index := 0
+	for y := -10; y < 10; y += 2 {
+		for x := -10; x < 10; x += 2 {
+			translations[index] = {f32(x), f32(y), 0.0}
+			index += 1
+		}
+	}
+
+	cube := glc.primitive_resource(.Cube)
+	container_tex := glc.texture_resource(.Container)
+	dp := glc.dpd(&s.rs)
+	dp.shader = glc.shader_program_resource(.Instancing)
+	dp.num_instances = 100
+	glc.shader_use_program(dp.shader)
+	for i in 0 ..< 100{
+		glc.shader_uniform_set(dp.shader, fmt.ctprintf("u_offsets[%d]", i), translations[i])
+	}
 	glc.draw(cube, &dp, container_tex)
 }

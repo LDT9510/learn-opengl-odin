@@ -7,7 +7,7 @@ import "core:log"
 import glm "core:math/linalg/glsl"
 import sdl "vendor:sdl3"
 
-INITIAL_SCENE_IDX :: Scene_Index.Many_Cubes
+INITIAL_SCENE_IDX :: Scene_Index.Instanced
 
 setup :: proc(s: ^State) {
 	// initial state

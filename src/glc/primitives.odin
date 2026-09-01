@@ -281,7 +281,6 @@ FULL_SCREEN_QUAD_VERTICES := [?]Vertex {
 	{{1.0, -1.0, 0.0},  {0.0, 0.0, 0.0}, {1.0, 0.0}},
 	{{1.0, 1.0, 0.0},   {0.0, 0.0, 0.0}, {1.0, 1.0}},
 }
-
 @(rodata)
 MINI_QUAD_VERTICES := [?]Vertex {
 	// positions        // normals        // texture Coords

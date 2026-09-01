@@ -175,7 +175,7 @@ if %ERRORLEVEL%==0 (
 	if %is_debug%==yes (
 		if %attach_debugger%==yes (
 			set misc_dir=%output_dir%/../misc
-			if not exist !misc_dir! md !misc_dir! 
+			if not exist !misc_dir! md !misc_dir!
 			echo Running: raddbg %executable% on %CD%
 			raddbg %executable% --project:!misc_dir!/project.raddbg
 		)
