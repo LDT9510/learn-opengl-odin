@@ -14,7 +14,7 @@ Shader_Program :: struct {
 	name:          string,
 	vertex_name:   string,
 	fragment_name: string,
-	geometry_name: string,
+	geometry_name: Maybe(string),
 	id:            u32,
 }
 
@@ -224,6 +224,7 @@ Frag_Shader_Code_Resource_Index :: enum {
 	Magenta,
 	Depth,
 	Green,
+	Color,
 	Win_Rel,
 }
 @(rodata)
@@ -239,6 +240,7 @@ FRAGMENT_CODE_LOCATION := [Frag_Shader_Code_Resource_Index]string {
 	.Magenta    = "magenta",
 	.Depth      = "depth",
 	.Green      = "green",
+	.Color      = "color",
 }
 
 Geom_Shader_Code_Resource_Index :: enum {
@@ -280,7 +282,7 @@ shader_program_resource :: proc(index: Shader_Program_Resource_index) -> Shader_
 		.Green          = {"green", .Pos_Norm_Tex, .Green, nil},
 		.Outline        = {"outline", .Pos_Norm_Tex, .Outline, nil},
 		.Depth          = {"depth", .Pos_Norm_Tex, .Depth, nil},
-		.Geom_Demo      = {"geom_demo", .Points, .Green, .Basic},
+		.Geom_Demo      = {"geom_demo", .Points, .Color, .Basic},
 	}
 
 	if !g_shader_program_registry[index].is_loaded {
@@ -295,7 +297,7 @@ shader_program_resource :: proc(index: Shader_Program_Resource_index) -> Shader_
 
 		program, ok := shader_create_program(vertex, fragment, geometry)
 		if !ok {
-			log.panicf("Cannot load Shader Program: '%s'", program_code.name)
+			log.errorf("Cannot load Shader Program: '%s'", program_code.name)
 		}
 
 		// set UBOs
@@ -313,8 +315,8 @@ shader_reload_all_program_resources :: proc() {
 	for &shader_res in g_shader_program_registry {
 		if shader_res.is_loaded {
 			old := shader_res.value
-			v, f := old.vertex_name, old.fragment_name
-			program, ok := shader_create_program(v, f)
+			v, f, g := old.vertex_name, old.fragment_name, old.geometry_name
+			program, ok := shader_create_program(v, f, g)
 			if ok {
 				// set UBOs
 				shader_ubo_bind(program, "Matrices", 0)

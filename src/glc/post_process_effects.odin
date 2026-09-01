@@ -23,12 +23,12 @@ post_process_effect :: proc(index: i32) -> Shader_Program {
 
 		program, ok := shader_create_program("quad", effect.path)
 		if !ok {
-			log.panicf("Cannot load post-processing effect: '%s'", effect.path)
+			log.errorf("Cannot load post-processing effect: '%s'", effect.path)
+		} else {
+			program.name = effect.path
+			g_registry[index].value.shader = program
+			g_registry[index].is_loaded = true
 		}
-
-		program.name = effect.path
-		g_registry[index].value.shader = program
-		g_registry[index].is_loaded = true
 	}
 
 	return effect.shader

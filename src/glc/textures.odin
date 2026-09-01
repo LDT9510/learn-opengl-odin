@@ -147,10 +147,11 @@ texture_resource :: proc(index: Texture_Resource_Index) -> Texture_Id {
 		log.debugf("Loading image: '%s'", location.name)
 		resource, ok := texture_load(location.name, location.flip, location.transparent)
 		if !ok {
-			log.panicf("Cannot load image: %s", location.name)
+			log.errorf("Cannot load image: %s", location.name)
+		} else {
+			g_registry[index].value = resource
+			g_registry[index].is_loaded = true
 		}
-		g_registry[index].value = resource
-		g_registry[index].is_loaded = true
 	}
 
 	return g_registry[index].value

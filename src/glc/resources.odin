@@ -30,10 +30,11 @@ resource_indexer :: proc(
 		log.debugf("Loading %s: '%s'", type_name, location)
 		resource, ok := loader(location)
 		if !ok {
-			log.panicf("Cannot load %s: %s", type_name, location)
+			log.errorf("Cannot load %s: %s", type_name, location)
+		} else {
+			registry[index].value = resource
+			registry[index].is_loaded = true
 		}
-		registry[index].value = resource
-		registry[index].is_loaded = true
 	}
 
 	return registry[index].value

@@ -10,7 +10,8 @@ Vertex :: struct {
 }
 
 Point2D_Vertex :: struct {
-	positions: glm.vec2,
+	position: glm.vec2,
+	color:    glm.vec3,
 }
 
 Mesh :: struct {

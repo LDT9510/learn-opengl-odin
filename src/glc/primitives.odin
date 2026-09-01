@@ -37,6 +37,16 @@ primitive_create_points :: proc() -> (p: Primitive) {
 
 	gl.EnableVertexAttribArray(0)
 	gl.VertexAttribPointer(0, 2, gl.FLOAT, gl.FALSE, size_of(Point2D_Vertex), 0)
+
+	gl.EnableVertexAttribArray(1)
+	gl.VertexAttribPointer(
+		1,
+		3,
+		gl.FLOAT,
+		gl.FALSE,
+		size_of(Point2D_Vertex),
+		offset_of(Point2D_Vertex, color),
+	)
 	gl.BindVertexArray(0)
 
 	return
@@ -285,10 +295,10 @@ MINI_QUAD_VERTICES := [?]Vertex {
 
 @(rodata)
 POINTS := [?]Point2D_Vertex {
-	{{-0.5,  0.5}},
-	{{0.5,   0.5}},
-	{{0.5,  -0.5}},
-	{{-0.5, -0.5}},
+	{{-0.5,  0.5}, {1.0, 0.0, 0.0}},
+	{{0.5,   0.5}, {0.0, 1.0, 0.0}},
+	{{0.5,  -0.5}, {0.0, 0.0, 1.0}},
+	{{-0.5, -0.5}, {1.0, 1.0, 0.0}},
 }
 
 // odinfmt: enable
