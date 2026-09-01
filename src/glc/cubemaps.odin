@@ -66,32 +66,6 @@ cubemap_destroy :: proc(cubemap: ^Cubemap) {
 	gl.DeleteTextures(1, &cubemap.texture)
 }
 
-@(private="file")
-g_registry: [Cubemap_Resource_Index]Resource(Cubemap)
-
-Cubemap_Resource_Index :: enum {
-	Sky,
-}
-
-cubemap_resource :: proc(index: Cubemap_Resource_Index) -> Cubemap {
-	@(static, rodata)
-	LOCATION := [Cubemap_Resource_Index]string {
-		.Sky = "sky",
-	}
-
-	loader :: proc(location: string) -> (Cubemap, bool) {
-		return cubemap_load(location)
-	}
-
-	return resource_indexer("Skybox (cubemap)", index, loader, LOCATION, &g_registry)
-}
-
-destroy_all_cubemaps_resources :: proc() {
-	for &resource in g_registry {
-		cubemap_destroy(&resource.value)
-	}
-}
-
 // odinfmt: disable
 @rodata
 CUBEMAP_VERTICES := [?]Cubemap_Vertex{

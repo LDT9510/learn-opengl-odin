@@ -219,7 +219,7 @@ mesh_draw :: proc(mesh: Mesh, dp: ^Draw_Params) {
 	shader_use_program(dp.shader)
 	model_matrix := glm.mat4Translate(dp.translation)
 	model_matrix *= glm.mat4Scale(dp.scale)
-	shader_uniform_set(dp.shader, "u_model", &model_matrix)
+	shader_uniform_set(dp.shader, "u_model", model_matrix)
 
 	gl.BindVertexArray(mesh.vao)
 	gl.DrawElements(gl.TRIANGLES, cast(i32)len(mesh.indices) - 1, gl.UNSIGNED_INT, nil)
@@ -245,7 +245,7 @@ primitive_draw :: proc(p: Primitive, dp: ^Draw_Params, texture_override := Textu
 	if p.type != .Full_Quad {
 		model_matrix := glm.mat4Translate(dp.translation)
 		model_matrix *= glm.mat4Scale(dp.scale)
-		shader_uniform_set(dp.shader, "u_model", &model_matrix)
+		shader_uniform_set(dp.shader, "u_model", model_matrix)
 		shader_uniform_set(dp.shader, "u_texture_diffuse1", 0)
 	}
 
@@ -327,12 +327,11 @@ framebuffer_draw :: proc(fb: Framebuffer, dp: ^Draw_Params, clear := false) {
 
 pre_draw :: proc(dp: ^Draw_Params) {
 	switch dp.effect {
-	case .None:
-		gl.StencilMask(0x00)
 	case .Outline:
 		gl.StencilFunc(gl.ALWAYS, 1, 0xff)
 		gl.StencilMask(0xff)
 	case .Normals:
+	case .None:
 	}
 
 	// debug modes
@@ -357,27 +356,24 @@ post_draw :: proc(object: $T, dp: ^Draw_Params) {
 	dp_copy.effect = .None
 
 	switch effect {
-	case .None:
 	case .Outline:
 		// NOTE: outlined objects must be drawn last (limitation)
-		gl.StencilFunc(gl.ALWAYS, 1, 0xff)
-		gl.StencilMask(0xff)
-
 		dp_copy.shader = shader_program_resource(.Outline)
 		shader_use_program(dp_copy.shader)
 		shader_uniform_set(dp_copy.shader, "u_border_color", OUTLINE_DEFAULT_COLOR)
 
 		dp_copy.scale += OUTLINE_DEFAULT_SIZE
 
-		gl.StencilFunc(gl.NOTEQUAL, 1, 0xff)
 		gl.StencilMask(0x00)
+		gl.StencilFunc(gl.NOTEQUAL, 1, 0xff)
 		gl.Disable(gl.DEPTH_TEST)
 		draw(object, &dp_copy)
-		gl.StencilMask(0xff)
-		gl.StencilFunc(gl.ALWAYS, 1, 0xff)
 		gl.Enable(gl.DEPTH_TEST)
+		gl.StencilFunc(gl.ALWAYS, 1, 0xff)
+		gl.StencilMask(0xff)
 	case .Normals:
 		dp_copy.shader = shader_program_resource(.Normals)
 		draw(object, &dp_copy)
+	case .None:
 	}
 }

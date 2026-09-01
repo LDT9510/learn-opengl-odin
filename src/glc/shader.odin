@@ -130,12 +130,9 @@ shader_uniform_set :: proc {
 	shader_uniform_set_bool,
 	shader_uniform_set_int32,
 	shader_uniform_set_float,
-	shader_uniform_set_vec2_f,
-	shader_uniform_set_vec3_f,
-	shader_uniform_set_vec4_f,
-	shader_uniform_set_vec2_v,
-	shader_uniform_set_vec3_v,
-	shader_uniform_set_vec4_v,
+	shader_uniform_set_vec2,
+	shader_uniform_set_vec3,
+	shader_uniform_set_vec4,
 	shader_uniform_set_mat2,
 	shader_uniform_set_mat3,
 	shader_uniform_set_mat4,
@@ -153,207 +150,36 @@ shader_uniform_set_float :: proc(program: Shader_Program, name: cstring, value: 
 	gl.Uniform1f(gl.GetUniformLocation(program.id, name), value)
 }
 
-shader_uniform_set_vec2_f :: proc(program: Shader_Program, name: cstring, x, y: f32) {
-	gl.Uniform2f(gl.GetUniformLocation(program.id, name), x, y)
+shader_uniform_set_vec2 :: proc(program: Shader_Program, name: cstring, value: glm.vec2) {
+	gl.Uniform2f(gl.GetUniformLocation(program.id, name), **value)
 }
 
-shader_uniform_set_vec3_f :: proc(program: Shader_Program, name: cstring, x, y, z: f32) {
-	gl.Uniform3f(gl.GetUniformLocation(program.id, name), x, y, z)
+shader_uniform_set_vec3 :: proc(program: Shader_Program, name: cstring, value: glm.vec3) {
+	gl.Uniform3f(gl.GetUniformLocation(program.id, name), **value)
 }
 
-shader_uniform_set_vec4_f :: proc(program: Shader_Program, name: cstring, x, y, z, w: f32) {
-	gl.Uniform4f(gl.GetUniformLocation(program.id, name), x, y, z, w)
+shader_uniform_set_vec4 :: proc(program: Shader_Program, name: cstring, value: glm.vec4) {
+	gl.Uniform4f(gl.GetUniformLocation(program.id, name), **value)
 }
 
-shader_uniform_set_vec2_v :: proc(program: Shader_Program, name: cstring, value: glm.vec2) {
-	gl.Uniform2f(gl.GetUniformLocation(program.id, name), value.x, value.y)
+shader_uniform_set_mat2 :: proc(program: Shader_Program, name: cstring, value: glm.mat2) {
+	flat := transmute([4]f32)value
+	gl.UniformMatrix2fv(gl.GetUniformLocation(program.id, name), 1, false, raw_data(flat[:]))
 }
 
-shader_uniform_set_vec3_v :: proc(program: Shader_Program, name: cstring, value: glm.vec3) {
-	gl.Uniform3f(gl.GetUniformLocation(program.id, name), value.x, value.y, value.z)
+shader_uniform_set_mat3 :: proc(program: Shader_Program, name: cstring, value: glm.mat3) {
+	flat := transmute([9]f32)value
+	gl.UniformMatrix3fv(gl.GetUniformLocation(program.id, name), 1, false, raw_data(flat[:]))
 }
 
-shader_uniform_set_vec4_v :: proc(program: Shader_Program, name: cstring, value: glm.vec4) {
-	gl.Uniform4f(gl.GetUniformLocation(program.id, name), value.x, value.y, value.z, value.w)
-}
-
-shader_uniform_set_mat2 :: proc(program: Shader_Program, name: cstring, value: ^glm.mat2) {
-	gl.UniformMatrix2fv(gl.GetUniformLocation(program.id, name), 1, false, &value[0][0])
-}
-
-shader_uniform_set_mat3 :: proc(program: Shader_Program, name: cstring, value: ^glm.mat3) {
-	gl.UniformMatrix3fv(gl.GetUniformLocation(program.id, name), 1, false, &value[0][0])
-}
-
-shader_uniform_set_mat4 :: proc(program: Shader_Program, name: cstring, value: ^glm.mat4) {
-	gl.UniformMatrix4fv(gl.GetUniformLocation(program.id, name), 1, false, &value[0][0])
+shader_uniform_set_mat4 :: proc(program: Shader_Program, name: cstring, value: glm.mat4) {
+	flat := transmute([16]f32)value
+	gl.UniformMatrix4fv(gl.GetUniformLocation(program.id, name), 1, false, raw_data(flat[:]))
 }
 
 shader_ubo_bind :: proc(program: Shader_Program, ubo_name: cstring, bind_point: u32) {
 	ubo_index := gl.GetUniformBlockIndex(program.id, ubo_name)
 	gl.UniformBlockBinding(program.id, ubo_index, bind_point)
-}
-
-@(private = "file")
-g_shader_program_registry: [Shader_Program_Resource_index]Resource(Shader_Program)
-
-Vert_Shader_Code_Resource_index :: enum {
-	Pos_Norm_Tex,
-	Pos_Norm_Tex_Inst,
-	Cubemap,
-	Points,
-	Normals,
-	// used by post process effects only
-	// Quad,
-}
-@(rodata)
-VERTEX_CODE_LOCATION := [Vert_Shader_Code_Resource_index]string {
-	.Pos_Norm_Tex      = "pos_norm_tex",
-	.Pos_Norm_Tex_Inst = "pos_norm_tex_instanced",
-	.Cubemap           = "cubemap",
-	.Points            = "points",
-	.Normals           = "normals",
-	// used by post process effects only
-	// .Quad         = "quad",
-}
-
-Frag_Shader_Code_Resource_Index :: enum {
-	Light_Cube,
-	UV_Map,
-	UV_Map2,
-	Phong,
-	Reflective,
-	Refractive,
-	Skybox,
-	Outline,
-	Magenta,
-	Depth,
-	Green,
-	Color,
-	Yellow,
-	Win_Rel,
-}
-@(rodata)
-FRAGMENT_CODE_LOCATION := [Frag_Shader_Code_Resource_Index]string {
-	.Light_Cube = "light_cube",
-	.UV_Map     = "uv_map",
-	.UV_Map2    = "uv_map2",
-	.Phong      = "phong",
-	.Reflective = "reflective",
-	.Refractive = "refractive",
-	.Skybox     = "skybox",
-	.Outline    = "colored_outline",
-	.Win_Rel    = "window_relative_color",
-	.Magenta    = "magenta",
-	.Depth      = "depth",
-	.Green      = "green",
-	.Yellow     = "yellow",
-	.Color      = "color",
-}
-
-Geom_Shader_Code_Resource_Index :: enum {
-	Basic,
-	Explode,
-	Normals,
-}
-@(rodata)
-GEOMETRY_CODE_LOCATION := [Geom_Shader_Code_Resource_Index]string {
-	.Basic   = "basic",
-	.Explode = "explode",
-	.Normals = "normals",
-}
-
-Shader_Program_Code :: struct {
-	name:         string,
-	vertex_idx:   Vert_Shader_Code_Resource_index,
-	fragment_idx: Frag_Shader_Code_Resource_Index,
-	geometry_idx: Maybe(Geom_Shader_Code_Resource_Index),
-}
-Shader_Program_Resource_index :: enum {
-	Simple_Texture,
-	Reflection,
-	Refraction,
-	Skybox,
-	Magenta,
-	Outline,
-	Green,
-	Depth,
-	Win_Rel,
-	Geom_Demo,
-	Exploding,
-	Normals,
-	Instancing,
-}
-
-shader_program_resource :: proc(index: Shader_Program_Resource_index) -> Shader_Program {
-	@(static, rodata)
-	PROGRAM_CODE := [Shader_Program_Resource_index]Shader_Program_Code {
-		.Simple_Texture = {"simple_texture", .Pos_Norm_Tex, .UV_Map, nil},
-		.Reflection     = {"reflection", .Pos_Norm_Tex, .Reflective, nil},
-		.Refraction     = {"refraction", .Pos_Norm_Tex, .Refractive, nil},
-		.Skybox         = {"cubemap", .Cubemap, .Skybox, nil},
-		.Magenta        = {"magenta", .Pos_Norm_Tex, .Magenta, nil},
-		.Win_Rel        = {"win_rel", .Pos_Norm_Tex, .Win_Rel, nil},
-		.Green          = {"green", .Pos_Norm_Tex, .Green, nil},
-		.Outline        = {"outline", .Pos_Norm_Tex, .Outline, nil},
-		.Depth          = {"depth", .Pos_Norm_Tex, .Depth, nil},
-		.Geom_Demo      = {"geom_demo", .Points, .Color, .Basic},
-		.Exploding      = {"exploding", .Pos_Norm_Tex, .UV_Map2, .Explode},
-		.Normals        = {"normal", .Normals, .Yellow, .Normals},
-		.Instancing     = {"instancing", .Pos_Norm_Tex_Inst, .UV_Map, nil},
-	}
-
-	if !g_shader_program_registry[index].is_loaded {
-		program_code := PROGRAM_CODE[index]
-		log.debugf("Loading Shader Program: '%s'", program_code.name)
-		vertex := VERTEX_CODE_LOCATION[program_code.vertex_idx]
-		fragment := FRAGMENT_CODE_LOCATION[program_code.fragment_idx]
-		geometry: Maybe(string)
-		if program_code.geometry_idx != nil {
-			geometry = GEOMETRY_CODE_LOCATION[program_code.geometry_idx.?]
-		}
-
-		program, ok := shader_create_program(vertex, fragment, geometry)
-		if !ok {
-			log.errorf("Cannot load Shader Program: '%s'", program_code.name)
-		}
-
-		// set UBOs
-		shader_ubo_bind(program, "Matrices", 0)
-
-		program.name = program_code.name
-		g_shader_program_registry[index].value = program
-		g_shader_program_registry[index].is_loaded = true
-	}
-
-	return g_shader_program_registry[index].value
-}
-
-shader_reload_all_program_resources :: proc() {
-	for &shader_res in g_shader_program_registry {
-		if shader_res.is_loaded {
-			old := shader_res.value
-			v, f, g := old.vertex_name, old.fragment_name, old.geometry_name
-			program, ok := shader_create_program(v, f, g)
-			if ok {
-				// set UBOs
-				shader_ubo_bind(program, "Matrices", 0)
-
-				program.name = old.name
-				shader_delete_program(old)
-				shader_res.value = program
-				log.infof("Shader program '%s' reloaded sucessfully.", program.name)
-			} else {
-				log.errorf("Cannot reload Shader Program: %s", program.name)
-			}
-		}
-	}
-}
-
-destroy_all_shaders_resources :: proc() {
-	for resource in g_shader_program_registry {
-		shader_delete_program(resource.value)
-	}
 }
 
 @(private)

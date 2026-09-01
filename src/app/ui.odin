@@ -2,26 +2,20 @@ package app
 
 import "main:glc"
 import "main:devui"
+import mod "main:modules"
 
 import im "extern:imgui"
 
 @(private = "file")
 ui_sections_render :: proc(s: ^State) {
 	if im.CollapsingHeader("Scene") {
-		if im.ComboCallback(
-			"Scene Selection",
-			cast(^i32)&s.scene.idx,
-			get_scene_name,
-			nil,
-			len(SCENE_REGISTRY),
-		) {
-			s.scene.current = SCENE_REGISTRY[s.scene.idx]
-		}
+		im.ComboCallback("Scene Selection", &s.scene.idx, get_scene_name, &s.scene.registry, SCENES_COUNT)
+		im.SetItemTooltip(current_scene(s).description)
 
 		im.ColorEdit3("Clear color", &s.rs.clear_color)
 	}
 
-	camera_dev_ui_frame(&s.app.camera)
+	mod.camera_dev_ui_frame(&s.app.camera)
 
 	if im.CollapsingHeader("Debug") {
 		vm := cast(^i32)&s.rs.view_mode
@@ -77,8 +71,9 @@ ui_sections_render :: proc(s: ^State) {
 		return effects[idx].value.display_name
 	}
 
-	get_scene_name :: proc "c" (_user_data: rawptr, idx: i32) -> cstring {
-		return SCENE_REGISTRY[Scene_Index(idx)].name
+	get_scene_name :: proc "c" (user_data: rawptr, idx: i32) -> cstring {
+		registry := cast([^]Scene)user_data
+		return registry[idx].name
 	}
 }
 

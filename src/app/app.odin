@@ -2,17 +2,16 @@ package app
 
 import "main:devui"
 import "main:glc"
+import mod "main:modules"
 
-import "core:log"
-import glm "core:math/linalg/glsl"
 import sdl "vendor:sdl3"
 
-INITIAL_SCENE_IDX :: Scene_Index.Instanced
+SCENES_COUNT :: 10
 
 setup :: proc(s: ^State) {
 	// initial state
 	s.app = {
-		camera             = camera_create(pos = {-0.1, 2.7, 9.9}, pitch = -18, yaw = -82),
+		camera             = mod.camera_create(pos = {-0.1, 2.7, 9.9}, pitch = -18, yaw = -82),
 		is_capturing_mouse = false,
 		show_ui            = true,
 	}
@@ -21,8 +20,20 @@ setup :: proc(s: ^State) {
 		clear_color = {0.392, 0.584, 0.929},
 	}
 	s.scene = {
-		current = SCENE_REGISTRY[INITIAL_SCENE_IDX],
-		idx     = INITIAL_SCENE_IDX,
+		registry = {
+			{"Empty", "An empty scene", nil, nil_scn_proc, nil_scn_proc, false},
+			SCENE_THREE_CUBES,
+			SCENE_REFR,
+			SCENE_MANY_CUBES,
+			SCENE_GRASS_N_WIN,
+			SCENE_SIMPLE_MODEL,
+			SCENE_SCRN_POS,
+			SCENE_GEOMETRY,
+			SCENE_EXPLODING,
+			SCENE_INSTANCING,
+		},
+		// always the last one
+		idx      = 1,//SCENES_COUNT - 1,
 	}
 
 	log_sdl_version()
@@ -55,9 +66,10 @@ teardown :: proc(s: ^State) {
 	glc.destroy_opengl_window(s.app.window, s.app.gl_context)
 }
 
+
 update :: proc(s: ^State) {
-	events_handle(s)
-	timing_update(&s.timings)
+	mod.events_handle(process_key_input, process_events, s)
+	mod.timing_update(&s.timings)
 
 	if s.app.should_reload_shaders {
 		glc.shader_reload_all_program_resources()
@@ -70,7 +82,13 @@ draw :: proc(s: ^State) {
 	glc.renderer_begin_drawing(&s.rs)
 	get_view_proj_and_frustrum(s)
 
-	s.scene.current.draw_proc(s)
+	scene := current_scene(s)
+	if !scene.is_loaded {
+		scene.setup_proc(s, scene.data)
+		scene.is_loaded = true
+	}
+
+	scene.draw_proc(s, scene.data)
 
 	glc.renderer_end_drawing(&s.rs)
 
@@ -81,27 +99,29 @@ draw :: proc(s: ^State) {
 	sdl.GL_SwapWindow(s.app.window)
 }
 
-process_key_input :: proc(s: ^State) {
+process_key_input :: proc(state: rawptr) {
+	s := cast(^State)state
 	switch {
-	case events_is_key_just_pressed(.ESCAPE):
+	case mod.events_is_key_just_pressed(.ESCAPE):
 		s.app.should_close = true
-	case events_is_key_just_pressed(.U):
+	case mod.events_is_key_just_pressed(.U):
 		glc.renderer_state_toggle_normal(&s.rs, .Wireframe)
-	case events_is_key_just_pressed(.O):
+	case mod.events_is_key_just_pressed(.O):
 		glc.renderer_state_toggle_normal(&s.rs, .Points)
-	case events_is_key_just_pressed(.P):
+	case mod.events_is_key_just_pressed(.P):
 		glc.renderer_state_toggle_normal(&s.rs, .Depth)
-	case events_is_key_just_pressed(.I):
+	case mod.events_is_key_just_pressed(.I):
 		s.app.show_ui = !s.app.show_ui
-	case events_is_key_just_pressed(.R):
+	case mod.events_is_key_just_pressed(.R):
 		s.app.should_reload_shaders = true
 	}
 
-	camera_handle_input(&s.app.camera, s.timings.delta_time)
+	mod.camera_handle_input(&s.app.camera, s.timings.delta_time)
 }
 
-process_events :: proc(event: sdl.Event, s: ^State) {
-	s.app.is_capturing_mouse = events_is_mouse_button_pressed({.RIGHT})
+process_events :: proc(event: sdl.Event, state: rawptr) {
+	s := cast(^State)state
+	s.app.is_capturing_mouse = mod.events_is_mouse_button_pressed({.RIGHT})
 	_ = sdl.SetWindowRelativeMouseMode(s.app.window, s.app.is_capturing_mouse)
 
 	#partial switch event.type {
@@ -111,59 +131,18 @@ process_events :: proc(event: sdl.Event, s: ^State) {
 		w := event.window
 		glc.renderer_handle_viewport_changed(&s.rs, w.data1, w.data2)
 	case .MOUSE_WHEEL:
-		camera_on_mouse_wheel_scroll(&s.app.camera, event.wheel.y)
+		mod.camera_on_mouse_wheel_scroll(&s.app.camera, event.wheel.y)
 	case .MOUSE_MOTION:
 		if s.app.is_capturing_mouse {
-			camera_on_mouse_move(&s.app.camera, event.motion.xrel, -event.motion.yrel, true)
+			mod.camera_on_mouse_move(&s.app.camera, event.motion.xrel, -event.motion.yrel, true)
 		}
 	}
-}
-
-get_view_proj_and_frustrum :: proc(s: ^State) {
-	s.rs.view = camera_get_view_matrix(s.app.camera)
-	s.rs.projection = glm.mat4Perspective(
-		glm.radians(s.app.camera.zoom),
-		glc.window_get_aspect_ratio(s.app.window),
-		s.app.camera.frustrum_near,
-		s.app.camera.frustrum_far,
-	)
-	s.rs.frustrum.near = s.app.camera.frustrum_near
-	s.rs.frustrum.far = s.app.camera.frustrum_far
-}
-
-update_vsync_state :: proc(s: ^State) {
-	if s.app.vsync_on {
-		sdl.GL_SetSwapInterval(1)
-	} else {
-		sdl.GL_SetSwapInterval(0)
-	}
-}
-
-should_close :: proc(s: ^State) -> bool {
-	return s.app.should_close
-}
-
-log_sdl_version :: proc() {
-	log.infof(
-		"SDL: compiled againts %d.%d.%d",
-		sdl.MAJOR_VERSION,
-		sdl.MINOR_VERSION,
-		sdl.MICRO_VERSION,
-	)
-
-	linked := sdl.GetVersion()
-	log.infof(
-		"SDL: linked againts %d.%d.%d",
-		sdl.VERSIONNUM_MAJOR(linked),
-		sdl.VERSIONNUM_MINOR(linked),
-		sdl.VERSIONNUM_MICRO(linked),
-	)
 }
 
 State :: struct {
 	app:     struct {
 		should_close:          bool,
-		camera:                Camera,
+		camera:                mod.Camera,
 		window:                ^sdl.Window,
 		is_capturing_mouse:    bool,
 		should_reload_shaders: bool,
@@ -171,10 +150,19 @@ State :: struct {
 		vsync_on:              bool,
 		gl_context:            sdl.GLContext,
 	},
-	timings: Timings,
+	timings: mod.Timings,
 	rs:      glc.Render_State,
 	scene:   struct {
-		current: Scene,
-		idx:     Scene_Index,
+		registry: [SCENES_COUNT]Scene,
+		idx:      i32,
 	},
+}
+
+Scene :: struct {
+	name:        cstring,
+	description: cstring,
+	data:        rawptr,
+	setup_proc:  proc(s: ^State, data: rawptr),
+	draw_proc:   proc(s: ^State, data: rawptr),
+	is_loaded:   bool,
 }

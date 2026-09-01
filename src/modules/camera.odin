@@ -1,4 +1,4 @@
-package app
+package modules
 
 import im "extern:imgui"
 

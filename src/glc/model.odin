@@ -54,33 +54,6 @@ model_delete :: proc(model: ^Model) {
 	delete(model.meshes)
 }
 
-@(private="file")
-g_registry: [Model_Resource_Index]Resource(Model)
-
-Model_Resource_Index :: enum {
-	Backpack,
-}
-
-model_resource :: proc(index: Model_Resource_Index) -> Model {
-	@(static, rodata)
-	LOCATION := [Model_Resource_Index]string {
-		.Backpack = "backpack",
-	}
-
-	loader :: proc(location: string) -> (Model, bool) {
-		return model_load(location)
-	}
-
-	return resource_indexer("3D model", index, loader, LOCATION, &g_registry)
-}
-
-destroy_all_models_resources :: proc() {
-	for &resource in g_registry {
-		model_delete(&resource.value)
-	}
-
-	model_unload_loaded_textures_path()
-}
 
 @(private)
 process_node :: proc(model: ^Model, node: ^ai.Node, scene: ^ai.Scene) {

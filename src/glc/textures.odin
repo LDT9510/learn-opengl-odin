@@ -1,7 +1,6 @@
 package glc
 
 import "core:image"
-import "core:log"
 import gl "vendor:OpenGL"
 
 Texture_Id :: distinct u32
@@ -110,55 +109,5 @@ flip_image_vertically_inplace :: proc(image_data: ^image.Image) {
 		copy(temp_row[:], top_row[:])
 		copy(top_row[:], bottom_row[:])
 		copy(bottom_row[:], temp_row[:])
-	}
-}
-
-@(private = "file")
-g_registry: [Texture_Resource_Index]Resource(Texture_Id)
-
-Texture_Resource_Index :: enum {
-	Container,
-	Create_Diffuse,
-	Crate_Specular,
-	Grass,
-	Marble,
-	Metal,
-	Transparent_Window,
-}
-texture_resource :: proc(index: Texture_Resource_Index) -> Texture_Id {
-	Params :: struct {
-		name:        string,
-		flip:        bool,
-		transparent: bool,
-	}
-	@(static, rodata)
-	LOCATION := [Texture_Resource_Index]Params {
-		.Container = {name = "container.jpg"},
-		.Create_Diffuse = {name = "crate_diffuse.png"},
-		.Crate_Specular = {name = "crate_specular.png"},
-		.Grass = {"grass.png", true, true},
-		.Marble = {name = "marble.jpg"},
-		.Metal = {name = "metal.png"},
-		.Transparent_Window = {name = "blending_transparent_window.png", transparent = true},
-	}
-
-	if !g_registry[index].is_loaded {
-		location := LOCATION[index]
-		log.debugf("Loading image: '%s'", location.name)
-		resource, ok := texture_load(location.name, location.flip, location.transparent)
-		if !ok {
-			log.errorf("Cannot load image: %s", location.name)
-		} else {
-			g_registry[index].value = resource
-			g_registry[index].is_loaded = true
-		}
-	}
-
-	return g_registry[index].value
-}
-
-destroy_all_textures_resources :: proc() {
-	for resource in g_registry {
-		texture_destroy(resource.value)
 	}
 }
