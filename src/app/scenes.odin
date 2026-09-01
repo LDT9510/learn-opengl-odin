@@ -31,7 +31,7 @@ SCENE_REGISTRY := [Scene_Index]Scene {
 	},
 	.Many_Cubes                   = {"Many Cubes", many_cubes},
 	.Grass_And_Windows            = {"Grass and transparent windows", grass_and_windows},
-	.Simple_Model                 = {"Simple Model", simple_model},
+	.Simple_Model                 = {"Simple Model with normals", simple_model_with_normals},
 	.Window_Relative              = {
 		"Color specific to screen space position",
 		windows_relative_colors,
@@ -47,7 +47,7 @@ Scene :: struct {
 
 @(private)
 refr_cubes_and_backpack :: proc(s: ^State) {
-	dp := glc.draw_params_default(&s.rs)
+	dp := glc.dpd(&s.rs)
 
 	refract_shader := glc.shader_program_resource(.Refraction)
 	glc.shader_use_program(refract_shader)
@@ -57,7 +57,7 @@ refr_cubes_and_backpack :: proc(s: ^State) {
 	glc.shader_use_program(reflect_shader)
 	glc.shader_uniform_set(reflect_shader, "u_camera_position", s.app.camera.position)
 
-	dp_sky := glc.draw_params_default(&s.rs)
+	dp_sky := glc.dpd(&s.rs)
 	dp_sky.shader = glc.shader_program_resource(.Skybox)
 
 	glc.draw(glc.cubemap_resource(.Sky), dp_sky)
@@ -98,25 +98,27 @@ cubes_in_plane :: proc(s: ^State) {
 
 	shader := glc.shader_program_resource(.Simple_Texture)
 
-	dp := glc.draw_params_default(&s.rs)
+	dp := glc.dpd(&s.rs)
 	dp.shader = shader
 	glc.shader_use_program(dp.shader)
 
-	dp_sky := glc.draw_params_default(&s.rs)
+	dp_sky := glc.dpd(&s.rs)
 	dp_sky.shader = glc.shader_program_resource(.Skybox)
 	glc.draw(glc.cubemap_resource(.Sky), dp_sky)
 
-	dp.translation.x = 0.0
-	dp.translation.y = -0.01
-	dp.outline.use = false
+	dp.translation.xy = {0.0, -0.01}
 	glc.draw(plane, &dp, plane_tex)
 
 	dp.translation.x = -2.0
-	dp.outline.use = true
+	dp.effect = .Outline
 	glc.draw(cube, &dp, container_tex)
 
-	dp.translation.x = 1.0
-	dp.translation.z = 1.0
+	dp.translation.xz = {1.0, 1.0}
+	dp.effect = .Outline
+	glc.draw(cube, &dp, container_tex)
+
+	dp.translation.yz = {2.0, -1.0}
+	dp.effect = .Normals
 	glc.draw(cube, &dp, container_tex)
 }
 
@@ -126,11 +128,11 @@ many_cubes :: proc(s: ^State) {
 	cube := glc.primitive_resource(.Cube)
 	shader := glc.shader_program_resource(.Simple_Texture)
 
-	dp_sky := glc.draw_params_default(&s.rs)
+	dp_sky := glc.dpd(&s.rs)
 	dp_sky.shader = glc.shader_program_resource(.Skybox)
 	glc.draw(glc.cubemap_resource(.Sky), dp_sky)
 
-	dp := glc.draw_params_default(&s.rs)
+	dp := glc.dpd(&s.rs)
 	dp.shader = shader
 	glc.shader_use_program(dp.shader)
 
@@ -172,7 +174,7 @@ grass_and_windows :: proc(s: ^State) {
 
 	shader := glc.shader_program_resource(.Simple_Texture)
 
-	dp := glc.draw_params_default(&s.rs)
+	dp := glc.dpd(&s.rs)
 	dp.shader = shader
 	glc.shader_use_program(dp.shader)
 
@@ -202,11 +204,15 @@ grass_and_windows :: proc(s: ^State) {
 }
 
 @(private)
-simple_model :: proc(s: ^State) {
+simple_model_with_normals :: proc(s: ^State) {
 	model := glc.model_resource(.Backpack)
-	dp := glc.draw_params_default(&s.rs)
+	dp := glc.dpd(&s.rs)
 	dp.shader = glc.shader_program_resource(.Simple_Texture)
 
+	glc.draw(model, &dp)
+
+	dp.translation.x = -6.0
+	dp.effect = .Normals
 	glc.draw(model, &dp)
 }
 
@@ -217,7 +223,7 @@ windows_relative_colors :: proc(s: ^State) {
 
 	cube := glc.primitive_resource(.Cube)
 	shader := glc.shader_program_resource(.Win_Rel)
-	dp := glc.draw_params_default(&s.rs)
+	dp := glc.dpd(&s.rs)
 	dp.shader = shader
 	glc.shader_use_program(dp.shader)
 
@@ -238,7 +244,7 @@ exploding_objects :: proc(s: ^State) {
 	model := glc.model_resource(.Backpack)
 	cube := glc.primitive_resource(.Cube)
 	container_tex := glc.texture_resource(.Container)
-	dp := glc.draw_params_default(&s.rs)
+	dp := glc.dpd(&s.rs)
 	dp.shader = glc.shader_program_resource(.Exploding)
 	glc.shader_uniform_set(dp.shader, "u_time", timing_get_elapsed_seconds())
 

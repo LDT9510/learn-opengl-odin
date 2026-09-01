@@ -201,6 +201,7 @@ Vert_Shader_Code_Resource_index :: enum {
 	Pos_Norm_Tex,
 	Cubemap,
 	Points,
+	Normals,
 	// used by post process effects only
 	// Quad,
 }
@@ -209,6 +210,7 @@ VERTEX_CODE_LOCATION := [Vert_Shader_Code_Resource_index]string {
 	.Pos_Norm_Tex = "pos_norm_tex",
 	.Cubemap      = "cubemap",
 	.Points       = "points",
+	.Normals      = "normals",
 	// used by post process effects only
 	// .Quad         = "quad",
 }
@@ -226,6 +228,7 @@ Frag_Shader_Code_Resource_Index :: enum {
 	Depth,
 	Green,
 	Color,
+	Yellow,
 	Win_Rel,
 }
 @(rodata)
@@ -242,17 +245,20 @@ FRAGMENT_CODE_LOCATION := [Frag_Shader_Code_Resource_Index]string {
 	.Magenta    = "magenta",
 	.Depth      = "depth",
 	.Green      = "green",
+	.Yellow     = "yellow",
 	.Color      = "color",
 }
 
 Geom_Shader_Code_Resource_Index :: enum {
 	Basic,
 	Explode,
+	Normals,
 }
 @(rodata)
 GEOMETRY_CODE_LOCATION := [Geom_Shader_Code_Resource_Index]string {
 	.Basic   = "basic",
 	.Explode = "explode",
+	.Normals = "normals",
 }
 
 Shader_Program_Code :: struct {
@@ -273,6 +279,7 @@ Shader_Program_Resource_index :: enum {
 	Win_Rel,
 	Geom_Demo,
 	Exploding,
+	Normals,
 }
 
 shader_program_resource :: proc(index: Shader_Program_Resource_index) -> Shader_Program {
@@ -289,6 +296,7 @@ shader_program_resource :: proc(index: Shader_Program_Resource_index) -> Shader_
 		.Depth          = {"depth", .Pos_Norm_Tex, .Depth, nil},
 		.Geom_Demo      = {"geom_demo", .Points, .Color, .Basic},
 		.Exploding      = {"exploding", .Pos_Norm_Tex, .UV_Map2, .Explode},
+		.Normals        = {"normal", .Normals, .Yellow, .Normals},
 	}
 
 	if !g_shader_program_registry[index].is_loaded {

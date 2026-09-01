@@ -16,6 +16,12 @@ Render_View_Mode :: enum {
 	Depth,
 }
 
+Post_Draw_Effect :: enum {
+	None,
+	Outline,
+	Normals,
+}
+
 renderer_is_debug_view_mode :: proc(vm: Render_View_Mode) -> bool {
 	return vm == .Wireframe || vm == .Depth || vm == .Points
 }
@@ -44,18 +50,12 @@ Draw_Params :: struct {
 	shader:      Shader_Program,
 	translation: glm.vec3,
 	scale:       glm.vec3,
-	outline:     struct {
-		use:   bool,
-		color: glm.vec3,
-		size:  f32,
-	},
+	effect:      Post_Draw_Effect,
 }
 
-draw_params_default :: proc(rs: ^Render_State) -> (dp: Draw_Params) {
+dpd :: proc(rs: ^Render_State) -> (dp: Draw_Params) {
 	dp.translation = 0
 	dp.scale = 1
-	dp.outline.color = OUTLINE_DEFAULT_COLOR
-	dp.outline.size = OUTLINE_DEFAULT_SIZE
 	dp.state = rs
 
 	return
@@ -149,7 +149,7 @@ renderer_end_drawing :: proc(rs: ^Render_State) {
 			gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
 		}
 
-		dp := draw_params_default(rs)
+		dp := dpd(rs)
 		dp.shader = post_process_effect(rs.post_process.idx)
 		framebuffer_draw(rs.post_process.fb, &dp, clear = true)
 	}
@@ -320,11 +320,13 @@ framebuffer_draw :: proc(fb: Framebuffer, dp: ^Draw_Params, clear := false) {
 }
 
 pre_draw :: proc(dp: ^Draw_Params) {
-	if dp.outline.use {
+	switch dp.effect {
+	case .None:
+		gl.StencilMask(0x00)
+	case .Outline:
 		gl.StencilFunc(gl.ALWAYS, 1, 0xff)
 		gl.StencilMask(0xff)
-	} else {
-		gl.StencilMask(0x00)
+	case .Normals:
 	}
 
 	// debug modes
@@ -344,16 +346,22 @@ pre_draw :: proc(dp: ^Draw_Params) {
 }
 
 post_draw :: proc(object: $T, dp: ^Draw_Params) {
-	// NOTE: outlined objects must be drawn last (limitation)
-	if dp.outline.use {
-		dp_copy := dp^
-		outline_shader := shader_program_resource(.Outline)
-		shader_use_program(outline_shader)
-		shader_uniform_set(outline_shader, "u_border_color", dp_copy.outline.color)
+	dp_copy := dp^
+	effect := dp_copy.effect
+	dp_copy.effect = .None
 
-		dp_copy.scale += dp_copy.outline.size
-		dp_copy.shader = outline_shader
-		dp_copy.outline.use = false
+	switch effect {
+	case .None:
+	case .Outline:
+		// NOTE: outlined objects must be drawn last (limitation)
+		gl.StencilFunc(gl.ALWAYS, 1, 0xff)
+		gl.StencilMask(0xff)
+
+		dp_copy.shader = shader_program_resource(.Outline)
+		shader_use_program(dp_copy.shader)
+		shader_uniform_set(dp_copy.shader, "u_border_color", OUTLINE_DEFAULT_COLOR)
+
+		dp_copy.scale += OUTLINE_DEFAULT_SIZE
 
 		gl.StencilFunc(gl.NOTEQUAL, 1, 0xff)
 		gl.StencilMask(0x00)
@@ -362,5 +370,8 @@ post_draw :: proc(object: $T, dp: ^Draw_Params) {
 		gl.StencilMask(0xff)
 		gl.StencilFunc(gl.ALWAYS, 1, 0xff)
 		gl.Enable(gl.DEPTH_TEST)
+	case .Normals:
+		dp_copy.shader = shader_program_resource(.Normals)
+		draw(object, &dp_copy)
 	}
 }
