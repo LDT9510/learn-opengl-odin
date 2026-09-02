@@ -13,11 +13,15 @@ SCENE_INSTANCING := Scene {
 	&g_scene_data,
 	setup,
 	draw,
+	nil_scn_proc,
 	false,
 }
 
+NUM_INSTANCES :: 100 // need to match the vertex shader
+SIDE :: 10 // ~sqrt(NUM_INSTANCES)
+
 Scene_Data :: struct {
-	translations: [100]glm.vec3,
+	translations: [NUM_INSTANCES]glm.vec3,
 	shader:       glc.Shader_Program,
 }
 g_scene_data: Scene_Data
@@ -26,8 +30,8 @@ setup :: proc(s: ^State, data: rawptr) {
 	data := scene_data(data, Scene_Data)
 
 	index := 0
-	for y := -10; y < 10; y += 2 {
-		for x := -10; x < 10; x += 2 {
+	for y := -SIDE; y < SIDE; y += 2 {
+		for x := -SIDE; x < SIDE; x += 2 {
 			data.translations[index] = {f32(x), f32(y), 0.0}
 			index += 1
 		}

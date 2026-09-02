@@ -13,6 +13,7 @@ SCENE_GRASS_N_WIN :: Scene {
 	nil,
 	nil_scn_proc,
 	draw,
+	nil_scn_proc,
 	false,
 }
 

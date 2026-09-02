@@ -3,3 +3,4 @@
 *.exe
 *.cap
 **/.bin
+src/.generated/**

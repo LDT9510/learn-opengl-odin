@@ -6,14 +6,15 @@ import mod "main:modules"
 
 import gl "vendor:OpenGL"
 
-@private
+@(private)
 SCENE_EXPLODING :: Scene {
-		"Exploding objects",
-		"Use geometry shaders to explode some objects",
-		nil,
-		nil_scn_proc,
-		draw,
-		false,
+	"Exploding objects",
+	"Use geometry shaders to explode some objects",
+	nil,
+	nil_scn_proc,
+	draw,
+	nil_scn_proc,
+	false,
 }
 
 draw :: proc(s: ^State, _data: rawptr) {

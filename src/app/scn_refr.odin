@@ -10,6 +10,7 @@ SCENE_REFR :: Scene {
 	nil,
 	nil_scn_proc,
 	draw,
+	nil_scn_proc,
 	false,
 }
 

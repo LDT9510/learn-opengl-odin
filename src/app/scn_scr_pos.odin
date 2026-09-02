@@ -12,6 +12,7 @@ SCENE_SCRN_POS :: Scene {
 	nil,
 	nil_scn_proc,
 	draw,
+	nil_scn_proc,
 	false,
 }
 
@@ -20,7 +21,7 @@ draw :: proc(s: ^State, _data: rawptr) {
 	gl.Disable(gl.CULL_FACE)
 
 	cube := glc.primitive_resource(.Cube)
-	shader := glc.shader_program_resource(.Win_Rel)
+	shader := glc.shader_program_resource(.Window_Relative)
 	dp := glc.dpd(&s.rs)
 	dp.shader = shader
 	glc.shader_use_program(dp.shader)

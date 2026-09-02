@@ -1,126 +1,23 @@
 package glc
 
+import res "main:.generated/resources"
+
 import "core:log"
 import "core:reflect"
 
 // ============================== SHADERS ==============================
-Vert_Shader_Code_Resource_index :: enum {
-	Pos_Norm_Tex,
-	Pos_Norm_Tex_Inst,
-	Cubemap,
-	Points,
-	Normals,
-	// used by post process effects only
-	// Quad,
-}
-@(rodata)
-VERTEX_CODE_LOCATION := [Vert_Shader_Code_Resource_index]string {
-	.Pos_Norm_Tex      = "pos_norm_tex",
-	.Pos_Norm_Tex_Inst = "pos_norm_tex_instanced",
-	.Cubemap           = "cubemap",
-	.Points            = "points",
-	.Normals           = "normals",
-	// used by post process effects only
-	// .Quad         = "quad",
-}
-
-Frag_Shader_Code_Resource_Index :: enum {
-	Light_Cube,
-	UV_Map,
-	UV_Map2,
-	Phong,
-	Reflective,
-	Refractive,
-	Skybox,
-	Outline,
-	Magenta,
-	Depth,
-	Green,
-	Color,
-	Yellow,
-	Win_Rel,
-}
-@(rodata)
-FRAGMENT_CODE_LOCATION := [Frag_Shader_Code_Resource_Index]string {
-	.Light_Cube = "light_cube",
-	.UV_Map     = "uv_map",
-	.UV_Map2    = "uv_map2",
-	.Phong      = "phong",
-	.Reflective = "reflective",
-	.Refractive = "refractive",
-	.Skybox     = "skybox",
-	.Outline    = "colored_outline",
-	.Win_Rel    = "window_relative_color",
-	.Magenta    = "magenta",
-	.Depth      = "depth",
-	.Green      = "green",
-	.Yellow     = "yellow",
-	.Color      = "color",
-}
-
-Geom_Shader_Code_Resource_Index :: enum {
-	Basic,
-	Explode,
-	Normals,
-}
-@(rodata)
-GEOMETRY_CODE_LOCATION := [Geom_Shader_Code_Resource_Index]string {
-	.Basic   = "basic",
-	.Explode = "explode",
-	.Normals = "normals",
-}
-
-Shader_Program_Code :: struct {
-	name:         string,
-	vertex_idx:   Vert_Shader_Code_Resource_index,
-	fragment_idx: Frag_Shader_Code_Resource_Index,
-	geometry_idx: Maybe(Geom_Shader_Code_Resource_Index),
-}
-Shader_Program_Resource_index :: enum {
-	Simple_Texture,
-	Reflection,
-	Refraction,
-	Skybox,
-	Magenta,
-	Outline,
-	Green,
-	Depth,
-	Win_Rel,
-	Geom_Demo,
-	Exploding,
-	Normals,
-	Instancing,
-}
-
 @(private = "file")
-g_shader_program_registry: [Shader_Program_Resource_index]Resource(Shader_Program)
+g_shader_program_registry: [res.Shaders_Program_Index]Resource(Shader_Program)
 
-shader_program_resource :: proc(index: Shader_Program_Resource_index) -> Shader_Program {
-	@(static, rodata)
-	PROGRAM_CODE := [Shader_Program_Resource_index]Shader_Program_Code {
-		.Simple_Texture = {"simple_texture", .Pos_Norm_Tex, .UV_Map, nil},
-		.Reflection     = {"reflection", .Pos_Norm_Tex, .Reflective, nil},
-		.Refraction     = {"refraction", .Pos_Norm_Tex, .Refractive, nil},
-		.Skybox         = {"cubemap", .Cubemap, .Skybox, nil},
-		.Magenta        = {"magenta", .Pos_Norm_Tex, .Magenta, nil},
-		.Win_Rel        = {"win_rel", .Pos_Norm_Tex, .Win_Rel, nil},
-		.Green          = {"green", .Pos_Norm_Tex, .Green, nil},
-		.Outline        = {"outline", .Pos_Norm_Tex, .Outline, nil},
-		.Depth          = {"depth", .Pos_Norm_Tex, .Depth, nil},
-		.Geom_Demo      = {"geom_demo", .Points, .Color, .Basic},
-		.Exploding      = {"exploding", .Pos_Norm_Tex, .UV_Map2, .Explode},
-		.Normals        = {"normal", .Normals, .Yellow, .Normals},
-		.Instancing     = {"instancing", .Pos_Norm_Tex_Inst, .UV_Map, nil},
-	}
-
+shader_program_resource :: proc(index: res.Shaders_Program_Index) -> Shader_Program {
 	if !g_shader_program_registry[index].is_loaded {
-		program_code := PROGRAM_CODE[index]
+		program_code := res.SHADERS_PROGRAM_LOCATION[index]
 		log.debugf("Loading Shader Program: '%s'", program_code.name)
-		vertex := VERTEX_CODE_LOCATION[program_code.vertex_idx]
-		fragment := FRAGMENT_CODE_LOCATION[program_code.fragment_idx]
+		vertex := program_code.vertex_name
+		fragment := program_code.fragment_name
 		geometry: Maybe(string)
-		if program_code.geometry_idx != nil {
-			geometry = GEOMETRY_CODE_LOCATION[program_code.geometry_idx.?]
+		if program_code.geometry_name != nil {
+			geometry = program_code.geometry_name.?
 		}
 
 		program, ok := shader_create_program(vertex, fragment, geometry)
@@ -167,39 +64,13 @@ destroy_all_shaders_resources :: proc() {
 }
 
 // ============================== TEXTURES ==============================
-Texture_Resource_Index :: enum {
-	Container,
-	Create_Diffuse,
-	Crate_Specular,
-	Grass,
-	Marble,
-	Metal,
-	Transparent_Window,
-}
-
-Texture_Resource_Params :: struct {
-	name:        string,
-	flip:        bool,
-	transparent: bool,
-}
-
-@(rodata)
-TEXTURES_RES_LOCATION := [Texture_Resource_Index]Texture_Resource_Params {
-	.Container = {name = "container.jpg"},
-	.Create_Diffuse = {name = "crate_diffuse.png"},
-	.Crate_Specular = {name = "crate_specular.png"},
-	.Grass = {"grass.png", true, true},
-	.Marble = {name = "marble.jpg"},
-	.Metal = {name = "metal.png"},
-	.Transparent_Window = {name = "blending_transparent_window.png", transparent = true},
-}
-
 @(private = "file")
-g_texture_registry: [Texture_Resource_Index]Resource(Texture_Id)
-texture_resource :: proc(index: Texture_Resource_Index) -> Texture_Id {
+g_texture_registry: [res.Textures_Index]Resource(Texture_Id)
+
+texture_resource :: proc(index: res.Textures_Index) -> Texture_Id {
 
 	if !g_texture_registry[index].is_loaded {
-		location := TEXTURES_RES_LOCATION[index]
+		location := res.TEXTURES_LOCATION[index]
 		log.debugf("Loading image: '%s'", location.name)
 		resource, ok := texture_load(location.name, location.flip, location.transparent)
 		if !ok {
@@ -220,25 +91,16 @@ destroy_all_textures_resources :: proc() {
 }
 
 // ============================== MODELS ==============================
-Model_Resource_Index :: enum {
-	Backpack,
-}
-
-@(rodata)
-MODEL_RES_LOCATION := [Model_Resource_Index]string {
-	.Backpack = "backpack",
-}
-
 @(private = "file")
-g_model_registry: [Model_Resource_Index]Resource(Model)
+g_model_registry: [res.Models_Index]Resource(Model)
 
-model_resource :: proc(index: Model_Resource_Index) -> Model {
+model_resource :: proc(index: res.Models_Index) -> Model {
 
 	loader :: proc(location: string) -> (Model, bool) {
 		return model_load(location)
 	}
 
-	return resource_indexer("3D model", index, loader, MODEL_RES_LOCATION, &g_model_registry)
+	return resource_indexer("3D model", index, loader, res.MODELS_LOCATION, &g_model_registry)
 }
 
 destroy_all_models_resources :: proc() {
@@ -250,19 +112,10 @@ destroy_all_models_resources :: proc() {
 }
 
 // ============================== CUBEMAPS ==============================
-Cubemap_Resource_Index :: enum {
-	Sky,
-}
-
-@(rodata)
-CUBEMAP_RES_LOCATION := [Cubemap_Resource_Index]string {
-	.Sky = "sky",
-}
-
 @(private = "file")
-g_cubemap_registry: [Cubemap_Resource_Index]Resource(Cubemap)
+g_cubemap_registry: [res.Cubemaps_Index]Resource(Cubemap)
 
-cubemap_resource :: proc(index: Cubemap_Resource_Index) -> Cubemap {
+cubemap_resource :: proc(index: res.Cubemaps_Index) -> Cubemap {
 	loader :: proc(location: string) -> (Cubemap, bool) {
 		return cubemap_load(location)
 	}
@@ -271,7 +124,7 @@ cubemap_resource :: proc(index: Cubemap_Resource_Index) -> Cubemap {
 		"Skybox (cubemap)",
 		index,
 		loader,
-		CUBEMAP_RES_LOCATION,
+		res.CUBEMAPS_LOCATION,
 		&g_cubemap_registry,
 	)
 }
@@ -284,6 +137,7 @@ destroy_all_cubemaps_resources :: proc() {
 
 
 // ============================== PRIMITIVES ==============================
+// primitives take advantage of the ones defined in `primitives.odin`
 Primitive_Resource_Index :: Primitive_Type
 
 @(private = "file")
@@ -305,6 +159,16 @@ destroy_all_primitives_resources :: proc() {
 	for &resource in s_primitive_registry {
 		primitive_destroy(&resource.value)
 	}
+}
+
+// ============================== HELPERS ==============================
+destroy_all :: proc() {
+	destroy_all_cubemaps_resources()
+	destroy_all_primitives_resources()
+	destroy_all_shaders_resources()
+	destroy_all_textures_resources()
+	destroy_all_models_resources()
+	destroy_all_post_process_effects_resources()
 }
 
 @(private = "file")
@@ -330,14 +194,6 @@ resource_indexer :: proc(
 	return registry[index].value
 }
 
-destroy_all :: proc() {
-	destroy_all_cubemaps_resources()
-	destroy_all_primitives_resources()
-	destroy_all_shaders_resources()
-	destroy_all_textures_resources()
-	destroy_all_models_resources()
-	destroy_all_post_process_effects_resources()
-}
 
 Resource :: struct($T: typeid) {
 	value:     T,

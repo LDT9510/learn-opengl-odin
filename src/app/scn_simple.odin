@@ -10,6 +10,7 @@ SCENE_SIMPLE_MODEL :: Scene {
 	nil,
 	nil_scn_proc,
 	draw,
+	nil_scn_proc,
 	false,
 }
 

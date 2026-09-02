@@ -10,18 +10,9 @@ SCENES_COUNT :: 10
 
 setup :: proc(s: ^State) {
 	// initial state
-	s.app = {
-		camera             = mod.camera_create(pos = {-0.1, 2.7, 9.9}, pitch = -18, yaw = -82),
-		is_capturing_mouse = false,
-		show_ui            = true,
-	}
-	s.rs = {
-		view_mode   = .Normal,
-		clear_color = {0.392, 0.584, 0.929},
-	}
 	s.scene = {
 		registry = {
-			{"Empty", "An empty scene", nil, nil_scn_proc, nil_scn_proc, false},
+			{"Empty", "An empty scene", nil, nil_scn_proc, nil_scn_proc, nil_scn_proc, false},
 			SCENE_THREE_CUBES,
 			SCENE_REFR,
 			SCENE_MANY_CUBES,
@@ -33,7 +24,17 @@ setup :: proc(s: ^State) {
 			SCENE_INSTANCING,
 		},
 		// always the last one
-		idx      = 1,//SCENES_COUNT - 1,
+		idx      = SCENES_COUNT - 1,
+	}
+
+	s.app = {
+		camera             = mod.camera_create(pos = {-0.1, 2.7, 9.9}, pitch = -18, yaw = -82),
+		is_capturing_mouse = false,
+		show_ui            = true,
+	}
+	s.rs = {
+		view_mode   = .Normal,
+		clear_color = {0.392, 0.584, 0.929},
 	}
 
 	log_sdl_version()
@@ -57,6 +58,10 @@ setup :: proc(s: ^State) {
 
 teardown :: proc(s: ^State) {
 	devui.deinit()
+
+	for scene in s.scene.registry {
+		scene.destroy(s, scene.data)
+	}
 
 	glc.framebuffer_destroy(&s.rs.post_process.fb)
 
@@ -164,5 +169,6 @@ Scene :: struct {
 	data:        rawptr,
 	setup_proc:  proc(s: ^State, data: rawptr),
 	draw_proc:   proc(s: ^State, data: rawptr),
+	destroy:     proc(s: ^State, data: rawptr),
 	is_loaded:   bool,
 }

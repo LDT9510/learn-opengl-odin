@@ -10,6 +10,7 @@ SCENE_THREE_CUBES :: Scene {
 	nil,
 	nil_scn_proc,
 	draw,
+	nil_scn_proc,
 	false,
 }
 

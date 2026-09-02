@@ -76,22 +76,30 @@ destroy_all_post_process_effects_resources :: proc() {
 }
 
 post_process_effects_get_available :: proc() {
-	f, oerr := os.open(CONTENT_FRAGMENT_SHADER_PATH + "post/")
-	ensure(oerr == nil)
-	defer os.close(f)
-
-	it := os.read_directory_iterator_create(f)
-	defer os.read_directory_iterator_destroy(&it)
-
 	effect_none := Resource(Post_Process_Effect) {
 		value = {display_name = fmt.caprint("None")},
 		is_loaded = true,
 	}
 	append(&g_registry, effect_none)
 
+	f, oerr := os.open(CONTENT_POST_PROCESS_SHADER_PATH)
+	if oerr != nil {
+		log.errorf(
+			"Unable to load post-processing effects: %v ('%s')",
+			CONTENT_POST_PROCESS_SHADER_PATH,
+			oerr,
+		)
+		return
+	}
+	defer os.close(f)
+
+
+	it := os.read_directory_iterator_create(f)
+	defer os.read_directory_iterator_destroy(&it)
+
 	log.info("Loading post processing effects...")
 	for info in os.read_directory_iterator(&it) {
-		file_path := strings.concatenate({"post/", filepath.stem(info.name)})
+		file_path := strings.concatenate({"post_process/", filepath.stem(info.name)})
 
 		capitalized_name := strings.to_pascal_case(filepath.stem(info.name))
 		defer delete(capitalized_name)

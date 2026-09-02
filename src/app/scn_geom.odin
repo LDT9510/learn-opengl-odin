@@ -10,10 +10,11 @@ SCENE_GEOMETRY :: Scene {
 	nil,
 	nil_scn_proc,
 	draw,
+	nil_scn_proc,
 	false,
 }
 
 draw :: proc(s: ^State, _data: rawptr) {
 	points := glc.primitive_resource(.Points)
-	glc.draw(points, glc.shader_program_resource(.Geom_Demo))
+	glc.draw(points, glc.shader_program_resource(.Geometry_Demo))
 }

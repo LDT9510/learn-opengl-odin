@@ -2,7 +2,7 @@
 setlocal EnableDelayedExpansion
 
 rem NOTE: executables in "output_dir" are not portable
- 
+
 set project_name=learn_opengl
 
 set command="%~1"
@@ -39,6 +39,14 @@ set attach_debugger=no
 
 if %command%=="" (
 	set is_command_known=yes
+)
+if %command%=="res" (
+	echo Generating resources...
+	uv run tools/resources_codegen.py
+	if !ERRORLEVEL!==0 (
+		echo Resources generated
+	)
+	exit /b !ERRORLEVEL! 
 )
 if %command%=="build-all" (
 	set is_command_known=yes
