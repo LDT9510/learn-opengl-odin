@@ -38,30 +38,32 @@ shader_create_program_from_stages :: proc(
 	program: Shader_Program,
 	ok: bool,
 ) {
-	success: i32
-	program.vertex_name = vertex.name
-	program.fragment_name = fragment.name
+	prog: Shader_Program
+	prog.vertex_name = vertex.name
+	prog.fragment_name = fragment.name
 
-	program.id = gl.CreateProgram()
-	gl.AttachShader(program.id, vertex.id)
-	gl.AttachShader(program.id, fragment.id)
+	prog.id = gl.CreateProgram()
+	gl.AttachShader(prog.id, vertex.id)
+	gl.AttachShader(prog.id, fragment.id)
 
 	geom, geom_ok := geometry.?
 	if geom_ok {
-		program.geometry_name = geom.name
-		gl.AttachShader(program.id, geom.id)
+		prog.geometry_name = geom.name
+		gl.AttachShader(prog.id, geom.id)
 	}
 
-	gl.LinkProgram(program.id)
-	gl.GetProgramiv(program.id, gl.LINK_STATUS, &success)
+	gl.LinkProgram(prog.id)
+
+	success: i32
+	gl.GetProgramiv(prog.id, gl.LINK_STATUS, &success)
 	if success != 1 {
 		info_log: [512]c.char
-		gl.GetProgramInfoLog(program.id, size_of(info_log), nil, &info_log[0])
+		gl.GetProgramInfoLog(prog.id, size_of(info_log), nil, &info_log[0])
 		log.errorf("Shader program link error: \n\t\t\t%s", cast(cstring)&info_log[0])
 		return
 	}
 
-	return program, true
+	return prog, true
 }
 
 shader_create_program_from_code :: proc(
@@ -89,7 +91,7 @@ shader_create_program_from_content :: proc(
 	fragment_file_name: string,
 	geometry_file_name: Maybe(string) = nil,
 ) -> (
-	program_id: Shader_Program,
+	program: Shader_Program,
 	ok: bool,
 ) {
 	vertex_code := content_load_shader_code(vertex_file_name, .Vertex) or_return
@@ -190,19 +192,20 @@ shader_create_stage :: proc(
 	shader: Shader_Stage,
 	ok: bool,
 ) {
-	success: i32
 	code := shader_data.code
 
-	shader.name = shader_data.name
-	shader.id = gl.CreateShader(cast(u32)type)
+	sh: Shader_Stage
+	sh.name = shader_data.name
+	sh.id = gl.CreateShader(cast(u32)type)
 
-	gl.ShaderSource(shader.id, 1, &code, nil)
-	gl.CompileShader(shader.id)
-	gl.GetShaderiv(shader.id, gl.COMPILE_STATUS, &success)
+	gl.ShaderSource(sh.id, 1, &code, nil)
+	gl.CompileShader(sh.id)
 
+	success: i32
+	gl.GetShaderiv(sh.id, gl.COMPILE_STATUS, &success)
 	if success != 1 {
 		info_log: [512]c.char
-		gl.GetShaderInfoLog(shader.id, size_of(info_log), nil, &info_log[0])
+		gl.GetShaderInfoLog(sh.id, size_of(info_log), nil, &info_log[0])
 
 		shader_type_name: string
 		switch type {
@@ -217,13 +220,11 @@ shader_create_stage :: proc(
 		log.errorf(
 			"%s shader '%s' compilation error: \n\t\t\t%s",
 			shader_type_name,
-			shader.name,
+			sh.name,
 			cast(cstring)&info_log[0],
 		)
 		return
 	}
 
-	ok = true
-
-	return
+	return sh, true
 }

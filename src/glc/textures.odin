@@ -33,7 +33,7 @@ texture_load_from_model :: proc(
 	image_data := content_load_image_from_model(model_name, image_name) or_return
 	defer content_destroy_image(image_data)
 
-	return texture_load_from_image_data(image_data, false)
+	return texture_load_from_image_data(image_data, false), true
 }
 
 texture_load_from_content :: proc(
@@ -51,16 +51,13 @@ texture_load_from_content :: proc(
 		flip_image_vertically_inplace(image_data)
 	}
 
-	return texture_load_from_image_data(image_data, transparent)
+	return texture_load_from_image_data(image_data, transparent), true
 }
 
 texture_load_from_image_data :: proc(
 	image_data: ^image.Image,
 	transparent := false,
-) -> (
-	texture_id: Texture_Id,
-	ok: bool,
-) {
+) -> Texture_Id {
 	tex_id: u32
 	gl.GenTextures(1, &tex_id)
 
@@ -88,7 +85,7 @@ texture_load_from_image_data :: proc(
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 
-	return cast(Texture_Id)tex_id, true
+	return cast(Texture_Id)tex_id
 }
 
 texture_destroy :: proc(texture_id: Texture_Id) {

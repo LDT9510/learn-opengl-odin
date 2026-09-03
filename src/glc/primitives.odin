@@ -18,7 +18,8 @@ Primitive :: struct {
 	type:        Primitive_Type,
 }
 
-primitive_create_points :: proc() -> (p: Primitive) {
+primitive_create_points :: proc() -> Primitive {
+	p: Primitive
 	p.type = .Points
 	p.vertex_size = len(POINTS)
 
@@ -47,7 +48,7 @@ primitive_create_points :: proc() -> (p: Primitive) {
 	)
 	gl.BindVertexArray(0)
 
-	return
+	return p
 }
 
 primitive_create :: proc {
@@ -56,9 +57,8 @@ primitive_create :: proc {
 	primitive_create_from_texture,
 }
 
-primitive_create_untextured :: proc(p_type: Primitive_Type) -> (p: Primitive) {
-	p = _primitive_create_internal(p_type, false, false)
-	return
+primitive_create_untextured :: proc(p_type: Primitive_Type) -> Primitive {
+	return _primitive_create_internal(p_type, false, false)
 }
 
 primitive_create_from_texture :: proc(
@@ -66,15 +66,11 @@ primitive_create_from_texture :: proc(
 	texture: Texture_Id,
 	flip_texture_vertically := false,
 	transparent := false,
-) -> (
-	p: Primitive,
-) {
-	p = _primitive_create_internal(p_type, flip_texture_vertically, transparent)
-
+) -> Primitive {
+	p := _primitive_create_internal(p_type, flip_texture_vertically, transparent)
 	p.texture = texture
 
-	return
-
+	return p
 }
 
 primitive_create_from_image :: proc(
@@ -83,16 +79,18 @@ primitive_create_from_image :: proc(
 	flip_texture_vertically := false,
 	transparent := false,
 ) -> (
-	p: Primitive,
+	primitive: Primitive,
+	ok: bool,
 ) {
-	p = _primitive_create_internal(p_type, flip_texture_vertically, transparent)
+	p := _primitive_create_internal(p_type, flip_texture_vertically, transparent)
 
-	p.texture =
-		texture_load(image_name, flip_texture_vertically, transparent) or_else panic(
-			"Cannot load texture",
-		)
+	texture, t_ok := texture_load(image_name, flip_texture_vertically, transparent)
+	if !t_ok {
+		return
+	}
+	p.texture = texture
 
-	return
+	return p, true
 }
 
 @(private)
@@ -100,9 +98,8 @@ _primitive_create_internal :: proc(
 	p_type: Primitive_Type,
 	flip_texture_vertically: bool,
 	transparent: bool,
-) -> (
-	p: Primitive,
-) {
+) -> Primitive {
+	p: Primitive
 
 	vertices: []Vertex
 	switch p_type {
@@ -153,7 +150,7 @@ _primitive_create_internal :: proc(
 	)
 	gl.BindVertexArray(0)
 
-	return
+	return p
 }
 
 primitive_destroy :: proc(p: ^Primitive) {
@@ -161,6 +158,3 @@ primitive_destroy :: proc(p: ^Primitive) {
 	gl.DeleteBuffers(1, &p.vbo)
 	texture_destroy(p.texture)
 }
-
-
-

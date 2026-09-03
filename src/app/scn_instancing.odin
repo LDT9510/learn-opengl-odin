@@ -22,7 +22,6 @@ SIDE :: 10 // ~sqrt(NUM_INSTANCES)
 
 Scene_Data :: struct {
 	translations: [NUM_INSTANCES]glm.vec3,
-	shader:       glc.Shader_Program,
 }
 g_scene_data: Scene_Data
 
@@ -36,12 +35,6 @@ setup :: proc(s: ^State, data: rawptr) {
 			index += 1
 		}
 	}
-
-	data.shader = glc.shader_program_resource(.Instancing)
-	glc.shader_use_program(data.shader)
-	for i in 0 ..< len(data.translations) {
-		glc.shader_uniform_set(data.shader, fmt.ctprintf("u_offsets[%d]", i), data.translations[i])
-	}
 }
 
 draw :: proc(s: ^State, data: rawptr) {
@@ -50,7 +43,13 @@ draw :: proc(s: ^State, data: rawptr) {
 	cube := glc.primitive_resource(.Cube)
 	container_tex := glc.texture_resource(.Container)
 	dp := glc.dpd(&s.rs)
-	dp.shader = data.shader
+
+	dp.shader = glc.shader_program_resource(.Instancing)
+	glc.shader_use_program(dp.shader)
+	for i in 0 ..< len(data.translations) {
+		glc.shader_uniform_set(dp.shader, fmt.ctprintf("u_offsets[%d]", i), data.translations[i])
+	}
+
 	dp.num_instances = len(data.translations)
 	glc.draw(cube, &dp, container_tex)
 }

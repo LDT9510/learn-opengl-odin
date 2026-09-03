@@ -42,9 +42,8 @@ model_load :: proc(model_name: string) -> (model: Model, ok: bool) {
 
 	model.name = model_name
 	process_node(&model, scene.mRootNode, scene)
-	ok = true
 
-	return
+	return model, true
 }
 
 model_delete :: proc(model: ^Model) {
@@ -68,7 +67,7 @@ process_node :: proc(model: ^Model, node: ^ai.Node, scene: ^ai.Scene) {
 }
 
 @(private)
-process :: proc(in_mesh: ^ai.Mesh, scene: ^ai.Scene, model_name: string) -> (out_mesh: Mesh) {
+process :: proc(in_mesh: ^ai.Mesh, scene: ^ai.Scene, model_name: string) -> (mesh: Mesh) {
 	// vertex data
 	for i in 0 ..< in_mesh.mNumVertices {
 		vertex := Vertex {
@@ -78,26 +77,26 @@ process :: proc(in_mesh: ^ai.Mesh, scene: ^ai.Scene, model_name: string) -> (out
 		if (in_mesh.mTextureCoords[0] != nil) {
 			vertex.tex_coords = in_mesh.mTextureCoords[0][i].xy
 		}
-		append(&out_mesh.vertices, vertex)
+		append(&mesh.vertices, vertex)
 	}
 
 	// indices
 	for i in 0 ..< in_mesh.mNumFaces {
 		face := in_mesh.mFaces[i]
 		for j in 0 ..< face.mNumIndices {
-			append(&out_mesh.indices, face.mIndices[j])
+			append(&mesh.indices, face.mIndices[j])
 		}
 	}
 
 	if (in_mesh.mMaterialIndex >= 0) {
 		material := scene.mMaterials[in_mesh.mMaterialIndex]
-		load_material_textures(material, .DIFFUSE, model_name, &out_mesh.textures)
-		load_material_textures(material, .SPECULAR, model_name, &out_mesh.textures)
+		load_material_textures(material, .DIFFUSE, model_name, &mesh.textures)
+		load_material_textures(material, .SPECULAR, model_name, &mesh.textures)
 	}
 
-	mesh_init(&out_mesh)
+	mesh_init(&mesh)
 
-	return
+	return mesh
 }
 
 @(private)

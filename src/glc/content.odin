@@ -20,7 +20,7 @@ CONTENT_MODEL_PATH :: CONTENT_BASE_PATH + "models/"
 
 Content_Shader_Data :: struct {
 	name: string,
-	code:      cstring,
+	code: cstring,
 }
 
 // NOTE: without some kind of descriptor, we need to hardcode this
@@ -55,18 +55,11 @@ content_load_image_from_model :: proc(
 		log.errorf("Failed to load model image '%s': %v", image_path, err)
 		return
 	}
-	ok = true
-	image_data = data
 
-	return
+	return data, true
 }
 
-content_load_image :: proc(
-	image_name: string,
-) -> (
-	image_data: ^image.Image,
-	ok: bool,
-) {
+content_load_image :: proc(image_name: string) -> (image_data: ^image.Image, ok: bool) {
 	image_path := strings.concatenate({CONTENT_IMAGE_PATH, image_name})
 	defer delete(image_path)
 
@@ -75,10 +68,8 @@ content_load_image :: proc(
 		log.errorf("Failed to load image '%s': %v", image_path, err)
 		return
 	}
-	ok = true
-	image_data = data
 
-	return
+	return data, true
 }
 
 content_load_cubemap_images :: proc(
@@ -99,9 +90,8 @@ content_load_cubemap_images :: proc(
 
 		cubemap_images[i] = image_data
 	}
-	ok = true
 
-	return
+	return cubemap_images, true
 }
 
 content_get_model_full_path :: proc(
@@ -143,9 +133,7 @@ content_load_shader_code :: proc(
 	shader_data.name = shader_name
 	shader_data.code = strings.clone_to_cstring(file_content)
 
-	ok = true
-
-	return
+	return shader_data, true
 }
 
 content_destroy_model_full_path :: proc(full_path: Content_Model_Full_Path) {
@@ -167,7 +155,7 @@ content_destroy_shader_data :: proc(shader_data: Content_Shader_Data) {
 }
 
 @(private)
-_read_file_bytes :: proc(path: string) -> (data: []byte, ok: bool) {
+_read_file_bytes :: proc(path: string) -> (file_content: []byte, ok: bool) {
 	content, error := os.read_entire_file(path, context.allocator)
 
 	if error != nil {

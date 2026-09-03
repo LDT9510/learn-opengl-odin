@@ -1,6 +1,5 @@
 package glc
 
-import "core:log"
 import gl "vendor:OpenGL"
 
 Framebuffer :: struct {
@@ -10,12 +9,9 @@ Framebuffer :: struct {
 	primitive:     Primitive,
 }
 
-framebuffer_create :: proc(
-	primitive_type: Primitive_Type,
-	width, height: i32,
-) -> (
-	fb: Framebuffer,
-) {
+framebuffer_create :: proc(primitive_type: Primitive_Type, width, height: i32) -> Framebuffer {
+	fb: Framebuffer
+
 	// create
 	gl.GenFramebuffers(1, &fb.id)
 	gl.BindFramebuffer(gl.FRAMEBUFFER, fb.id)
@@ -45,12 +41,10 @@ framebuffer_create :: proc(
 	)
 
 	// check
-	if gl.CheckFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE {
-		log.panic("Framebuffer is not complete!")
-	}
+	assert(gl.CheckFramebufferStatus(gl.FRAMEBUFFER) == gl.FRAMEBUFFER_COMPLETE)
 	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
 
-	return
+	return fb
 }
 
 framebuffer_use :: proc(fb: Framebuffer) {

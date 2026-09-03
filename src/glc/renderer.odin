@@ -54,12 +54,8 @@ Draw_Params :: struct {
 	num_instances: int,
 }
 
-dpd :: proc(rs: ^Render_State) -> (dp: Draw_Params) {
-	dp.translation = 0
-	dp.scale = 1
-	dp.state = rs
-
-	return
+dpd :: proc(rs: ^Render_State) -> Draw_Params {
+	return {translation = 0, scale = 1, state = rs}
 }
 
 renderer_log_info :: proc() {

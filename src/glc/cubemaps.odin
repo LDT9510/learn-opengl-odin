@@ -11,13 +11,14 @@ Cubemap :: struct {
 }
 
 cubemap_load :: proc(name: string) -> (cubemap: Cubemap, ok: bool) {
-	// texture
-	gl.GenTextures(1, &cubemap.texture)
-	gl.BindTexture(gl.TEXTURE_CUBE_MAP, cubemap.texture)
+	cbm: Cubemap
 
 	cubemap_images := content_load_cubemap_images(name) or_return
 	defer content_destroy_cubemap_images(cubemap_images)
 
+	// texture
+	gl.GenTextures(1, &cbm.texture)
+	gl.BindTexture(gl.TEXTURE_CUBE_MAP, cbm.texture)
 	for image, i in cubemap_images {
 		image_format: u32 = image.channels == 4 ? gl.RGBA : gl.RGB
 
@@ -33,7 +34,6 @@ cubemap_load :: proc(name: string) -> (cubemap: Cubemap, ok: bool) {
 			raw_data(image.pixels.buf),
 		)
 	}
-	ok = true
 
 	gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
 	gl.TexParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
@@ -43,10 +43,10 @@ cubemap_load :: proc(name: string) -> (cubemap: Cubemap, ok: bool) {
 	gl.BindTexture(gl.TEXTURE_CUBE_MAP, 0)
 
 	// vertex data
-	gl.GenVertexArrays(1, &cubemap.vao)
-	gl.GenBuffers(1, &cubemap.vbo)
-	gl.BindVertexArray(cubemap.vao)
-	gl.BindBuffer(gl.ARRAY_BUFFER, cubemap.vbo)
+	gl.GenVertexArrays(1, &cbm.vao)
+	gl.GenBuffers(1, &cbm.vbo)
+	gl.BindVertexArray(cbm.vao)
+	gl.BindBuffer(gl.ARRAY_BUFFER, cbm.vbo)
 	gl.BufferData(
 		gl.ARRAY_BUFFER,
 		cast(int)len(CUBEMAP_VERTICES) * size_of(Cubemap_Vertex),
@@ -57,7 +57,7 @@ cubemap_load :: proc(name: string) -> (cubemap: Cubemap, ok: bool) {
 	gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, size_of(Cubemap_Vertex), 0)
 	gl.BindVertexArray(0)
 
-	return
+	return cbm, true
 }
 
 cubemap_destroy :: proc(cubemap: ^Cubemap) {
