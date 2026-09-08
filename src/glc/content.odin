@@ -29,8 +29,8 @@ Content_Shader_Data :: struct {
 CUBEMAP_FACES := [?]string {
 	"right.jpg",
 	"left.jpg",
-	"top.jpg",
-	"bottom.jpg",
+	"up.jpg",
+	"down.jpg",
 	"front.jpg",
 	"back.jpg",
 }

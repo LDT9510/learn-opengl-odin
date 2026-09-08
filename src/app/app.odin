@@ -6,7 +6,7 @@ import mod "main:modules"
 
 import sdl "vendor:sdl3"
 
-SCENES_COUNT :: 11
+SCENES_COUNT :: 12
 
 setup :: proc(s: ^State) {
 	// initial state
@@ -23,6 +23,7 @@ setup :: proc(s: ^State) {
 			SCENE_EXPLODING,
 			SCENE_INSTANCING,
 			SCENE_INSTANCING_ATTR,
+			SCENE_ASTEROID_FIELD,
 		},
 		// always the last one
 		idx      = SCENES_COUNT - 1,

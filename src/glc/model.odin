@@ -71,8 +71,8 @@ process :: proc(in_mesh: ^ai.Mesh, scene: ^ai.Scene, model_name: string) -> (mes
 	// vertex data
 	for i in 0 ..< in_mesh.mNumVertices {
 		vertex := Vertex {
-			position = in_mesh.mVertices[i],
-			normal   = in_mesh.mNormals[i],
+			position   = in_mesh.mVertices[i],
+			normal     = in_mesh.mNormals[i],
 		}
 		if (in_mesh.mTextureCoords[0] != nil) {
 			vertex.tex_coords = in_mesh.mTextureCoords[0][i].xy
@@ -88,7 +88,7 @@ process :: proc(in_mesh: ^ai.Mesh, scene: ^ai.Scene, model_name: string) -> (mes
 		}
 	}
 
-	if (in_mesh.mMaterialIndex >= 0) {
+	if (in_mesh.mMaterialIndex <= scene.mNumMaterials) {
 		material := scene.mMaterials[in_mesh.mMaterialIndex]
 		load_material_textures(material, .DIFFUSE, model_name, &mesh.textures)
 		load_material_textures(material, .SPECULAR, model_name, &mesh.textures)
