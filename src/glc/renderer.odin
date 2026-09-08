@@ -108,7 +108,7 @@ renderer_begin_drawing :: proc(rs: ^Render_State) {
 	gl.Enable(gl.DEPTH_TEST)
 
 	// stencil setup
-	// gl.Enable(gl.STENCIL_TEST)
+	gl.Enable(gl.STENCIL_TEST)
 	gl.StencilOp(gl.KEEP, gl.KEEP, gl.REPLACE)
 
 	// blending setup
@@ -215,16 +215,28 @@ mesh_draw :: proc(mesh: Mesh, dp: ^Draw_Params) {
 	}
 	gl.ActiveTexture(gl.TEXTURE0)
 
-	if dp.model_matrix != nil {
-		shader_uniform_set(dp.shader, "u_model", dp.model_matrix.?)
+	if dp.num_instances > 0 {
+		gl.BindVertexArray(mesh.vao)
+		gl.DrawElementsInstanced(
+			gl.TRIANGLES,
+			cast(i32)len(mesh.indices),
+			gl.UNSIGNED_INT,
+			nil,
+			cast(i32)dp.num_instances,
+		)
 	} else {
-		model_matrix := glm.mat4Translate(dp.translation)
-		model_matrix *= glm.mat4Scale(dp.scale)
-		shader_uniform_set(dp.shader, "u_model", model_matrix)
+		if dp.model_matrix != nil {
+			shader_uniform_set(dp.shader, "u_model", dp.model_matrix.?)
+		} else {
+			model_matrix := glm.mat4Translate(dp.translation)
+			model_matrix *= glm.mat4Scale(dp.scale)
+			shader_uniform_set(dp.shader, "u_model", model_matrix)
+		}
+
+		gl.BindVertexArray(mesh.vao)
+		gl.DrawElements(gl.TRIANGLES, cast(i32)len(mesh.indices), gl.UNSIGNED_INT, nil)
 	}
 
-	gl.BindVertexArray(mesh.vao)
-	gl.DrawElements(gl.TRIANGLES, cast(i32)len(mesh.indices), gl.UNSIGNED_INT, nil)
 	gl.BindVertexArray(0)
 
 	post_draw(mesh, dp)
@@ -261,6 +273,8 @@ primitive_draw :: proc(p: Primitive, dp: ^Draw_Params, texture_override := Textu
 	if p.type == .Plane {
 		// flat primitives must not be culled
 		gl.Disable(gl.CULL_FACE)
+	} else {
+		gl.Enable(gl.CULL_FACE)
 	}
 
 	gl.BindVertexArray(p.vao)

@@ -19,7 +19,7 @@ SCENE_ASTEROID_FIELD := Scene {
 	false,
 }
 
-NUM_ASTEROIDS :: 1000 // need to match the vertex shader
+NUM_ASTEROIDS :: 100_000
 
 Scene_Data :: struct {
 	asteroids_model_matrices: [NUM_ASTEROIDS]glm.mat4,
@@ -37,8 +37,8 @@ setup :: proc(s: ^State, data: rawptr) {
 	data := scene_data(data, Scene_Data)
 	libc.srand(cast(u32)time.now()._nsec)
 
-	radius := f32(50.0)
-	offset := f32(2.5)
+	radius := f32(150.0)
+	offset := f32(25.0)
 
 	for &m, i in data.asteroids_model_matrices {
 		// translation: displace along circle with radius in [-offset, offset]
@@ -61,33 +61,40 @@ setup :: proc(s: ^State, data: rawptr) {
 	data.planet_model_matrix = glm.mat4Translate({0.0, -3.0, 0.0})
 	data.planet_model_matrix *= glm.mat4Scale({4.0, 4.0, 4.0})
 
-	// trigger model loading
-	// glc.model_resource(.Planet)
-	// glc.model_resource(.Rock)
-	// glc.cubemap_resource(.Space)
 
-	// // do not use a resource for the cube because we write to the VAO
-	// data.cube = glc.primitive_create(.Cube)
-	// data.shader = glc.shader_program_resource(.Instancing_Attr)
-	//
-	// // new buffer
-	// gl.GenBuffers(1, &data.instance_vbo)
-	// gl.BindBuffer(gl.ARRAY_BUFFER, data.instance_vbo)
-	// gl.BufferData(
-	// 	gl.ARRAY_BUFFER,
-	// 	size_of(glm.vec3) * NUM_ASTEROIDS,
-	// 	&data.translations[0],
-	// 	gl.STATIC_DRAW,
-	// )
-	//
-	// // vertex attribute pointer config
-	// gl.BindVertexArray(data.cube.vao)
-	// gl.EnableVertexAttribArray(3)
-	// gl.BindBuffer(gl.ARRAY_BUFFER, data.instance_vbo)
-	// gl.VertexAttribPointer(3, 3, gl.FLOAT, gl.FALSE, size_of(glm.vec3), 0)
-	// gl.BindBuffer(gl.ARRAY_BUFFER, 0)
-	// gl.VertexAttribDivisor(3, 1) // this marks as an instance attribute
-	// gl.BindVertexArray(0)
+	gl.GenBuffers(1, &data.instance_vbo)
+	gl.BindBuffer(gl.ARRAY_BUFFER, data.instance_vbo)
+	gl.BufferData(
+		gl.ARRAY_BUFFER,
+		size_of(glm.mat4) * NUM_ASTEROIDS,
+		&data.asteroids_model_matrices[0],
+		gl.STATIC_DRAW,
+	)
+
+	asteroid := glc.model_resource(.Rock)
+	mat4_size := i32(size_of(glm.mat4))
+
+	for mesh in asteroid.meshes {
+		gl.BindVertexArray(mesh.vao)
+		gl.BindBuffer(gl.ARRAY_BUFFER, data.instance_vbo)
+
+		gl.EnableVertexAttribArray(3)
+		gl.VertexAttribPointer(3, 4, gl.FLOAT, gl.FALSE, mat4_size, 0)
+		gl.EnableVertexAttribArray(4)
+		gl.VertexAttribPointer(4, 4, gl.FLOAT, gl.FALSE, mat4_size, uintptr(size_of(glm.vec4)))
+		gl.EnableVertexAttribArray(5)
+		gl.VertexAttribPointer(5, 4, gl.FLOAT, gl.FALSE, mat4_size, uintptr(size_of(glm.vec4) * 2))
+		gl.EnableVertexAttribArray(6)
+		gl.VertexAttribPointer(6, 4, gl.FLOAT, gl.FALSE, mat4_size, uintptr(size_of(glm.vec4) * 3))
+
+		gl.VertexAttribDivisor(3, 1)
+		gl.VertexAttribDivisor(4, 1)
+		gl.VertexAttribDivisor(5, 1)
+		gl.VertexAttribDivisor(6, 1)
+
+		gl.BindVertexArray(0)
+	}
+	gl.BindBuffer(gl.ARRAY_BUFFER, 0)
 }
 
 draw :: proc(s: ^State, data: rawptr) {
@@ -105,8 +112,7 @@ draw :: proc(s: ^State, data: rawptr) {
 	dp.model_matrix = data.planet_model_matrix
 	glc.draw(planet, &dp)
 
-	for m in data.asteroids_model_matrices {
-		dp.model_matrix = m
-		glc.draw(asteroid, &dp)
-	}
+	dp.shader = glc.shader_program_resource(.Instancing_Model)
+	dp.num_instances = NUM_ASTEROIDS
+	glc.draw(asteroid, &dp)
 }

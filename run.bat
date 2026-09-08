@@ -36,6 +36,7 @@ set is_command_known=no
 set build_all=no
 set is_debug=no
 set attach_debugger=no
+set run_renderdoc=no
 
 if %command%=="" (
 	set is_command_known=yes
@@ -67,6 +68,10 @@ if %command%=="debug" (
 
 	if "%~2"=="attach" (
 		set attach_debugger=yes
+	)
+
+	if "%~2"=="render" (
+		set run_renderdoc=yes
 	)
 )
 if %command%=="release" (
@@ -119,6 +124,7 @@ if %command%=="ex" (
 		-define:OPENGL_EXERCISES_PATH=!exercise_section_dir!\^
 		-define:OPENGL_ROOT_CONTENT_PATH=%~dp0
 )
+
 
 if %is_command_known%==no (
 	echo Unknown command %command%
@@ -176,22 +182,20 @@ echo Running: %final_build_command%
 
 if %ERRORLEVEL%==0 (
 	cd %output_dir%
-	if %is_debug%==no (
-		echo Running A: %executable% on %output_dir%
-		.\%executable%
+
+	if %attach_debugger%==yes (
+		set misc_dir=%output_dir%/../misc
+		REM if not exist !misc_dir! mkdir !misc_dir!
+		start raddbg %executable% --project:!misc_dir!/project.raddbg
+		exit /b 0
 	)
-	if %is_debug%==yes (
-		if %attach_debugger%==yes (
-			set misc_dir=%output_dir%/../misc
-			if not exist !misc_dir! md !misc_dir!
-			echo Running: raddbg %executable% on %CD%
-			raddbg %executable% --project:!misc_dir!/project.raddbg
-		)
-		if %attach_debugger%==no (
-			echo Running: %executable% on %CD%
-			.\%executable%
-		)
+
+	if %run_renderdoc%==yes (
+		start renderdocui.exe capture %executable%
+		exit /b 0
 	)
+
+	.\%executable%
 )
 
 exit /b %ERRORLEVEL%

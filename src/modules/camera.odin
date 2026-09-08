@@ -113,7 +113,7 @@ camera_dev_ui_frame :: proc(c: ^Camera) {
 
 		im.SliderInt("Sprint factor", &c.sprint_factor, 2, 10)
 		im.DragFloat("Near Plane", &c.frustrum_near, 0.01, 0.1, 99.9)
-		im.DragFloat("Far Plane", &c.frustrum_far, 1.0, 50.0, 150.0)
+		im.DragFloat("Far Plane", &c.frustrum_far, 1.0, 50.0, 500.0)
 	}
 }
 
