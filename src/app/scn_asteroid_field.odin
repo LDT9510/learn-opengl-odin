@@ -10,33 +10,27 @@ import glm "core:math/linalg/glsl"
 import gl "vendor:OpenGL"
 
 @(private)
-SCENE_ASTEROID_FIELD := Scene {
+SCENE_ASTEROID_FIELD := scene(
 	"An asteroid field",
 	"Asteroid field drawn using instancing",
-	&g_scene_data,
 	setup,
 	draw,
 	destroy,
-	false,
-}
+)
 
 NUM_ASTEROIDS :: 100_000
 
-Scene_Data :: struct {
+g_data : struct {
 	asteroids_model_matrices: [NUM_ASTEROIDS]glm.mat4,
 	planet_model_matrix:      glm.mat4,
 	instance_vbo:             u32,
 }
-g_scene_data: Scene_Data
 
-destroy :: proc(s: ^State, data: rawptr) {
-	data := scene_data(data, Scene_Data)
-	gl.DeleteBuffers(1, &data.instance_vbo)
+destroy :: proc(s: ^State) {
+	gl.DeleteBuffers(1, &g_data.instance_vbo)
 }
 
-setup :: proc(s: ^State, data: rawptr) {
-	data := scene_data(data, Scene_Data)
-
+setup :: proc(s: ^State) {
 	s.app.camera = mod.camera_create(pos = {225.8, 96.3, 215.19}, yaw = -138, pitch = -21)
 	s.app.camera.frustrum_far = 500.0
 
@@ -45,7 +39,7 @@ setup :: proc(s: ^State, data: rawptr) {
 	radius := f32(150.0)
 	offset := f32(25.0)
 
-	for &m, i in data.asteroids_model_matrices {
+	for &m, i in g_data.asteroids_model_matrices {
 		// translation: displace along circle with radius in [-offset, offset]
 		angle := f32(i) / f32(NUM_ASTEROIDS) * 360.0
 		displacement := f32(libc.rand() % i32(2 * offset * 100)) / 100.0 - offset
@@ -63,16 +57,16 @@ setup :: proc(s: ^State, data: rawptr) {
 		m *= glm.mat4Rotate({0.4, 0.6, 0.8}, rot_angle)
 	}
 
-	data.planet_model_matrix = glm.mat4Translate({0.0, -3.0, 0.0})
-	data.planet_model_matrix *= glm.mat4Scale({4.0, 4.0, 4.0})
+	g_data.planet_model_matrix = glm.mat4Translate({0.0, -3.0, 0.0})
+	g_data.planet_model_matrix *= glm.mat4Scale({4.0, 4.0, 4.0})
 
 
-	gl.GenBuffers(1, &data.instance_vbo)
-	gl.BindBuffer(gl.ARRAY_BUFFER, data.instance_vbo)
+	gl.GenBuffers(1, &g_data.instance_vbo)
+	gl.BindBuffer(gl.ARRAY_BUFFER, g_data.instance_vbo)
 	gl.BufferData(
 		gl.ARRAY_BUFFER,
 		size_of(glm.mat4) * NUM_ASTEROIDS,
-		&data.asteroids_model_matrices[0],
+		&g_data.asteroids_model_matrices[0],
 		gl.STATIC_DRAW,
 	)
 
@@ -81,7 +75,7 @@ setup :: proc(s: ^State, data: rawptr) {
 
 	for mesh in asteroid.meshes {
 		gl.BindVertexArray(mesh.vao)
-		gl.BindBuffer(gl.ARRAY_BUFFER, data.instance_vbo)
+		gl.BindBuffer(gl.ARRAY_BUFFER, g_data.instance_vbo)
 
 		gl.EnableVertexAttribArray(3)
 		gl.VertexAttribPointer(3, 4, gl.FLOAT, gl.FALSE, mat4_size, 0)
@@ -102,9 +96,7 @@ setup :: proc(s: ^State, data: rawptr) {
 	gl.BindBuffer(gl.ARRAY_BUFFER, 0)
 }
 
-draw :: proc(s: ^State, data: rawptr) {
-	data := scene_data(data, Scene_Data)
-
+draw :: proc(s: ^State) {
 	planet := glc.model_resource(.Planet)
 	asteroid := glc.model_resource(.Rock)
 	space := glc.cubemap_resource(.Space)
@@ -114,7 +106,7 @@ draw :: proc(s: ^State, data: rawptr) {
 	glc.draw(space, dp)
 
 	dp.shader = glc.shader_program_resource(.Simple_Texture)
-	dp.model_matrix = data.planet_model_matrix
+	dp.model_matrix = g_data.planet_model_matrix
 	glc.draw(planet, &dp)
 
 	dp.shader = glc.shader_program_resource(.Instancing_Model)

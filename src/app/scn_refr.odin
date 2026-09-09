@@ -5,21 +5,18 @@ import "main:glc"
 import mod "main:modules"
 
 @(private)
-SCENE_REFR :: Scene {
+SCENE_REFR := scene(
 	"Reflect and Refract",
 	"Reflective and refractive cubes, backpack with cubemap",
-	nil,
 	setup,
 	draw,
-	nil_scn_proc,
-	false,
-}
+)
 
-setup :: proc(s: ^State, data: rawptr) {
+setup :: proc(s: ^State) {
 	s.app.camera = mod.camera_create(pos = {2.8, 2.7, 10.3}, yaw = -100, pitch = -12)
 }
 
-draw :: proc(s: ^State, _data: rawptr) {
+draw :: proc(s: ^State) {
 	dp := glc.dpd(&s.rs)
 
 	refract_shader := glc.shader_program_resource(.Refraction)

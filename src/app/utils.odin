@@ -7,16 +7,6 @@ import "core:log"
 import glm "core:math/linalg/glsl"
 import sdl "vendor:sdl3"
 
-current_scene :: proc(s: ^State) -> ^Scene {
-	return &s.scene.registry[s.scene.idx]
-}
-
-nil_scn_proc :: proc(s: ^State, data: rawptr) {}
-
-scene_data :: proc(data: rawptr, $TData_Type: typeid) -> ^TData_Type {
-	assert(data != nil)
-	return cast(^TData_Type)data
-}
 
 get_view_proj_and_frustrum :: proc(s: ^State) {
 	s.rs.view = mod.camera_get_view_matrix(s.app.camera)

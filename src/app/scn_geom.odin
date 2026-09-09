@@ -3,18 +3,13 @@ package app
 
 import "main:glc"
 
-@private
-SCENE_GEOMETRY :: Scene {
-	"Geometry Shaders",
-	"Use geometry shaders to draw 2D houses",
-	nil,
-	nil_scn_proc,
-	draw,
-	nil_scn_proc,
-	false,
-}
+@(private)
+SCENE_GEOMETRY := scene("Geometry Shaders", "Use geometry shaders to draw 2D houses", setup, draw)
 
-draw :: proc(s: ^State, _data: rawptr) {
+
+setup :: proc(s: ^State) {}
+
+draw :: proc(s: ^State) {
 	points := glc.primitive_resource(.Points)
 	glc.draw(points, glc.shader_program_resource(.Geometry_Demo))
 }

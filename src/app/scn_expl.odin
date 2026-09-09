@@ -7,21 +7,18 @@ import mod "main:modules"
 import gl "vendor:OpenGL"
 
 @(private)
-SCENE_EXPLODING :: Scene {
+SCENE_EXPLODING := scene(
 	"Exploding objects",
 	"Use geometry shaders to explode some objects",
-	nil,
 	setup,
 	draw,
-	nil_scn_proc,
-	false,
-}
+)
 
-setup :: proc(s: ^State, data: rawptr) {
+setup :: proc(s: ^State) {
 	s.app.camera = mod.camera_create(pos = {7.2, 0.9, 8.5}, yaw = -119, pitch = 5)
 }
 
-draw :: proc(s: ^State, _data: rawptr) {
+draw :: proc(s: ^State) {
 	// to see all the parts
 	gl.Disable(gl.CULL_FACE)
 
@@ -30,6 +27,7 @@ draw :: proc(s: ^State, _data: rawptr) {
 	container_tex := glc.texture_resource(.Container)
 	dp := glc.dpd(&s.rs)
 	dp.shader = glc.shader_program_resource(.Exploding)
+	glc.shader_use_program(dp.shader)
 	glc.shader_uniform_set(dp.shader, "u_time", mod.timing_get_elapsed_seconds())
 
 	glc.draw(model, &dp)

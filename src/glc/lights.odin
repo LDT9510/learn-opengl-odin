@@ -45,7 +45,7 @@ Lights :: struct {
 	spot:        Spot_Light,
 }
 
-lights_default :: proc() -> Lights {
+lights_default :: proc "contextless" () -> Lights {
 	return {
 		directional = {
 			direction = {-0.2, -1.0, -0.3},

@@ -8,7 +8,7 @@ green,            pos_norm_tex,                 green,           nil
 outline,          pos_norm_tex,                 colored_outline, nil
 depth,            pos_norm_tex,                 depth,           nil
 geometry_demo,    points,                       color,           basic
-exploding,        pos_norm_tex,                 uv_map2,         explode
+exploding,        pos_norm_tex,                 uv_map_geom,     explode
 normals,          normals,                      yellow,          normals
 instancing,       pos_norm_tex_instanced,       uv_map,          nil
 instancing_attr,  pos_norm_tex_instanced_attr,  uv_map,          nil

@@ -6,13 +6,13 @@ import mod "main:modules"
 
 import sdl "vendor:sdl3"
 
-SCENES_COUNT :: 12
+SCENES_COUNT :: 13
 
 setup :: proc(s: ^State) {
 	// initial state
 	s.scene = {
 		registry = {
-			{"Empty", "An empty scene", nil, nil_scn_proc, nil_scn_proc, nil_scn_proc, false},
+			scene("Empty", "An empty scene", nil_scn_proc, nil_scn_proc),
 			SCENE_THREE_CUBES,
 			SCENE_REFR,
 			SCENE_MANY_CUBES,
@@ -24,6 +24,7 @@ setup :: proc(s: ^State) {
 			SCENE_INSTANCING,
 			SCENE_INSTANCING_ATTR,
 			SCENE_ASTEROID_FIELD,
+			SCENE_BLINN_PHONG,
 		},
 		// always the last one
 		idx      = SCENES_COUNT - 1,
@@ -70,7 +71,7 @@ teardown :: proc(s: ^State) {
 	devui.deinit()
 
 	for scene in s.scene.registry {
-		scene.destroy(s, scene.data)
+		scene.destroy(s)
 	}
 
 	glc.framebuffer_destroy(&s.rs.post_process.fb)
@@ -99,16 +100,16 @@ draw :: proc(s: ^State) {
 
 	scene := current_scene(s)
 	if !scene.is_loaded {
-		scene.setup_proc(s, scene.data)
+		scene.setup_proc(s)
 		scene.is_loaded = true
 	}
 
-	scene.draw_proc(s, scene.data)
+	scene.draw_proc(s)
 
 	glc.renderer_end_drawing(&s.rs)
 
 	if s.app.show_ui {
-		render_main_ui_window(s)
+		render_main_ui_window(s, scene.ui_proc)
 	}
 
 	sdl.GL_SwapWindow(s.app.window)
@@ -173,12 +174,31 @@ State :: struct {
 	},
 }
 
+Scene_Proc :: #type proc(s: ^State)
+
 Scene :: struct {
 	name:        cstring,
 	description: cstring,
-	data:        rawptr,
-	setup_proc:  proc(s: ^State, data: rawptr),
-	draw_proc:   proc(s: ^State, data: rawptr),
-	destroy:     proc(s: ^State, data: rawptr),
+	setup_proc:  Scene_Proc,
+	draw_proc:   Scene_Proc,
+	ui_proc:     Scene_Proc,
+	destroy:     Scene_Proc,
 	is_loaded:   bool,
+}
+
+nil_scn_proc :: proc(s: ^State) {}
+
+scene :: proc "contextless" (
+	name, description: cstring,
+	setup: Scene_Proc,
+	draw: Scene_Proc,
+	ui: Scene_Proc = nil_scn_proc,
+	destroy: Scene_Proc = nil_scn_proc,
+) -> Scene {
+	return {name, description, setup, draw, ui, destroy, false}
+
+}
+
+current_scene :: proc(s: ^State) -> ^Scene {
+	return &s.scene.registry[s.scene.idx]
 }

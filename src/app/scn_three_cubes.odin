@@ -5,21 +5,18 @@ import "main:glc"
 import mod "main:modules"
 
 @(private)
-SCENE_THREE_CUBES :: Scene {
+SCENE_THREE_CUBES := scene(
 	"Three Cubes",
 	"Outlined cubes in a plane, and a floating cube showing normals",
-	nil,
 	setup,
 	draw,
-	nil_scn_proc,
-	false,
-}
+)
 
-setup :: proc(s: ^State, data: rawptr) {
+setup :: proc(s: ^State) {
 	s.app.camera = mod.camera_create(pos = {3.9, 3.2, 12.7}, yaw = -96, pitch = -13)
 }
 
-draw :: proc(s: ^State, _data: rawptr) {
+draw :: proc(s: ^State) {
 	cube := glc.primitive_resource(.Cube)
 	plane := glc.primitive_resource(.Plane)
 

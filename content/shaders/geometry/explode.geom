@@ -8,7 +8,7 @@ in VS_OUT {
 } gs_in[];
 
 in vec2 v_tex_coords[];
-out vec2 g_tex_coords;
+out vec2 geom_tex_coords;
 
 uniform float u_time;
 
@@ -30,13 +30,13 @@ void main() {
     vec3 normal = get_normal();
 
     gl_Position = explode(gl_in[0].gl_Position, normal);
-    g_tex_coords = v_tex_coords[0];
+    geom_tex_coords = v_tex_coords[0];
     EmitVertex();
     gl_Position = explode(gl_in[1].gl_Position, normal);
-    g_tex_coords = v_tex_coords[1];
+    geom_tex_coords = v_tex_coords[1];
     EmitVertex();
     gl_Position = explode(gl_in[2].gl_Position, normal);
-    g_tex_coords = v_tex_coords[2];
+    geom_tex_coords = v_tex_coords[2];
     EmitVertex();
     EndPrimitive();
 }

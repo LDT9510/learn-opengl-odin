@@ -8,15 +8,7 @@ import "core:slice"
 import glm "core:math/linalg/glsl"
 
 @(private)
-SCENE_GRASS_N_WIN :: Scene {
-	"Grass and Windows",
-	"Showcasing blending",
-	nil,
-	setup,
-	draw,
-	nil_scn_proc,
-	false,
-}
+SCENE_GRASS_N_WIN := scene("Grass and Windows", "Showcasing blending", setup, draw)
 
 Window_Position :: struct {
 	distance_to_camera: f32,
@@ -32,11 +24,11 @@ window_positions := [?]Window_Position {
 }
 // odinfmt: enable
 
-setup :: proc(s: ^State, data: rawptr) {
+setup :: proc(s: ^State) {
 	s.app.camera = mod.camera_create(pos = {1.1, 1.3, 10.7}, yaw = -88, pitch = -11)
 }
 
-draw :: proc(s: ^State, _data: rawptr) {
+draw :: proc(s: ^State) {
 	plane := glc.primitive_resource(.Plane)
 	quad := glc.primitive_resource(.Quad)
 

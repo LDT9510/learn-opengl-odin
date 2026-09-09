@@ -7,21 +7,18 @@ import mod "main:modules"
 import gl "vendor:OpenGL"
 
 @(private)
-SCENE_SCRN_POS :: Scene {
+SCENE_SCRN_POS := scene(
 	"Screen position",
 	"Showcases sceen dependant position drawing",
-	nil,
 	setup,
 	draw,
-	nil_scn_proc,
-	false,
-}
+)
 
-setup :: proc(s: ^State, data: rawptr) {
+setup :: proc(s: ^State) {
 	s.app.camera = mod.camera_create(pos = {2.3, 0.2, 5.0}, yaw = -106, pitch = -7)
 }
 
-draw :: proc(s: ^State, _data: rawptr) {
+draw :: proc(s: ^State) {
 	// disable to see the back face modified by `gl_FrontFacing`
 	gl.Disable(gl.CULL_FACE)
 

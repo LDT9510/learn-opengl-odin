@@ -7,21 +7,13 @@ import mod "main:modules"
 import glm "core:math/linalg/glsl"
 
 @(private)
-SCENE_MANY_CUBES :: Scene {
-	"Many Cubes",
-	"Matrix of cubes with breathing effect",
-	nil,
-	setup,
-	draw,
-	nil_scn_proc,
-	false,
-}
+SCENE_MANY_CUBES := scene("Many Cubes", "Matrix of cubes with breathing effect", setup, draw)
 
-setup :: proc(s: ^State, data: rawptr) {
+setup :: proc(s: ^State) {
 	s.app.camera = mod.camera_create(pos = {-3.2, 6.3, 28.5}, yaw = -63, pitch = -8)
 }
 
-draw :: proc(s: ^State, _data: rawptr) {
+draw :: proc(s: ^State) {
 	tex := glc.texture_resource(.Container)
 	cube := glc.primitive_resource(.Cube)
 	shader := glc.shader_program_resource(.Simple_Texture)

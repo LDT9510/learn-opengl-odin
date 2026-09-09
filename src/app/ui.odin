@@ -8,24 +8,11 @@ import im "extern:imgui"
 
 @(private = "file")
 ui_sections_render :: proc(s: ^State) {
-	if im.CollapsingHeader("Scene") {
-		if im.ComboCallback(
-			"Scene Selection",
-			&s.scene.idx,
-			get_scene_name,
-			&s.scene.registry,
-			SCENES_COUNT,
-		) {
-			current_scene(s).is_loaded = false
-		}
-		im.SetItemTooltip(current_scene(s).description)
-
-		im.ColorEdit3("Clear color", &s.rs.clear_color)
-	}
-
 	mod.camera_dev_ui_frame(&s.app.camera)
 
 	if im.CollapsingHeader("Renderer") {
+		im.ColorEdit3("Clear color", &s.rs.clear_color)
+
 		if im.TreeNode("Features") {
 			defer im.TreePop()
 			im.Checkbox("Depth test", &s.rs.features.depth_test)
@@ -95,13 +82,9 @@ ui_sections_render :: proc(s: ^State) {
 		return effects[idx].value.display_name
 	}
 
-	get_scene_name :: proc "c" (user_data: rawptr, idx: i32) -> cstring {
-		registry := cast([^]Scene)user_data
-		return registry[idx].name
-	}
 }
 
-render_main_ui_window :: proc(s: ^State) {
+render_main_ui_window :: proc(s: ^State, scene_ui_proc: Scene_Proc) {
 	devui.begin_frame()
 	defer devui.render_frame()
 
@@ -110,6 +93,22 @@ render_main_ui_window :: proc(s: ^State) {
 	im.PushItemWidth(170.0)
 	defer im.PopItemWidth()
 
+	if im.ComboCallback(
+		"Scene Selection",
+		&s.scene.idx,
+		get_scene_name,
+		&s.scene.registry,
+		SCENES_COUNT,
+	) {current_scene(s).is_loaded = false}
+	im.SetItemTooltip(current_scene(s).description)
+
+	if scene_ui_proc != nil_scn_proc {
+		if im.CollapsingHeader("Scene") {
+			scene_ui_proc(s)
+		}
+	}
+
+	im.Separator()
 	ui_sections_render(s)
 	im.Separator()
 
@@ -131,7 +130,7 @@ render_main_ui_window :: proc(s: ^State) {
 		shortcut("ESC", "Close program")
 	}
 
-	// helper
+	// ===================== helpers =====================
 	shortcut :: proc(name: cstring, description: cstring) {
 		YELLOW :: im.Vec4{1, 1, 0, 1}
 
@@ -139,5 +138,10 @@ render_main_ui_window :: proc(s: ^State) {
 		im.TableNextColumn()
 		im.Text(description)
 		im.TableNextColumn()
+	}
+
+	get_scene_name :: proc "c" (user_data: rawptr, idx: i32) -> cstring {
+		registry := cast([^]Scene)user_data
+		return registry[idx].name
 	}
 }

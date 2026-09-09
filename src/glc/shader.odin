@@ -181,7 +181,9 @@ shader_uniform_set_mat4 :: proc(program: Shader_Program, name: cstring, value: g
 
 shader_ubo_bind :: proc(program: Shader_Program, ubo_name: cstring, bind_point: u32) {
 	ubo_index := gl.GetUniformBlockIndex(program.id, ubo_name)
-	gl.UniformBlockBinding(program.id, ubo_index, bind_point)
+	if ubo_index != gl.INVALID_INDEX {
+		gl.UniformBlockBinding(program.id, ubo_index, bind_point)
+	}
 }
 
 @(private)
