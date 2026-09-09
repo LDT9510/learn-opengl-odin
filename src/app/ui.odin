@@ -25,20 +25,34 @@ ui_sections_render :: proc(s: ^State) {
 
 	mod.camera_dev_ui_frame(&s.app.camera)
 
-	if im.CollapsingHeader("Debug") {
-		vm := cast(^i32)&s.rs.view_mode
+	if im.CollapsingHeader("Renderer") {
+		if im.TreeNode("Features") {
+			defer im.TreePop()
+			im.Checkbox("Depth test", &s.rs.features.depth_test)
+			im.SameLine()
+			im.Checkbox("Stencil test", &s.rs.features.stencil_test)
+			im.SameLine()
+			im.Checkbox("Blending", &s.rs.features.blending)
+			im.Checkbox("Point size", &s.rs.features.program_point_size)
+			im.SameLine()
+			im.Checkbox("Cull Face", &s.rs.features.cull_face)
+		}
 
-		if im.RadioButtonIntPtr("Normal", vm, cast(i32)glc.Render_View_Mode.Normal) {
-			s.rs.view_mode = .Normal
-		}
-		if im.RadioButtonIntPtr("Wireframe (U)", vm, cast(i32)glc.Render_View_Mode.Wireframe) {
-			s.rs.view_mode = .Wireframe
-		}
-		if im.RadioButtonIntPtr("Points (O)", vm, cast(i32)glc.Render_View_Mode.Points) {
-			s.rs.view_mode = .Points
-		}
-		if im.RadioButtonIntPtr("Depth Buffer (P)", vm, cast(i32)glc.Render_View_Mode.Depth) {
-			s.rs.view_mode = .Depth
+		if im.TreeNode("View Modes") {
+			defer im.TreePop()
+			vm := cast(^i32)&s.rs.view_mode
+			if im.RadioButtonIntPtr("Normal", vm, cast(i32)glc.Render_View_Mode.Normal) {
+				s.rs.view_mode = .Normal
+			}
+			if im.RadioButtonIntPtr("Wireframe (U)", vm, cast(i32)glc.Render_View_Mode.Wireframe) {
+				s.rs.view_mode = .Wireframe
+			}
+			if im.RadioButtonIntPtr("Points (O)", vm, cast(i32)glc.Render_View_Mode.Points) {
+				s.rs.view_mode = .Points
+			}
+			if im.RadioButtonIntPtr("Depth Buffer (P)", vm, cast(i32)glc.Render_View_Mode.Depth) {
+				s.rs.view_mode = .Depth
+			}
 		}
 	}
 

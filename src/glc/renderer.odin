@@ -43,6 +43,13 @@ Render_State :: struct {
 	ubo:                struct {
 		matrices: u32,
 	},
+	features:           struct {
+		depth_test:         bool,
+		stencil_test:       bool,
+		blending:           bool,
+		cull_face:          bool,
+		program_point_size: bool,
+	},
 }
 
 Draw_Params :: struct {
@@ -105,23 +112,43 @@ renderer_begin_drawing :: proc(rs: ^Render_State) {
 	}
 
 	// depth setup
-	gl.Enable(gl.DEPTH_TEST)
+	if rs.features.depth_test {
+		gl.Enable(gl.DEPTH_TEST)
+	} else {
+		gl.Disable(gl.DEPTH_TEST)
+	}
 
 	// stencil setup
-	gl.Enable(gl.STENCIL_TEST)
-	gl.StencilOp(gl.KEEP, gl.KEEP, gl.REPLACE)
+	if rs.features.stencil_test {
+		gl.Enable(gl.STENCIL_TEST)
+		gl.StencilOp(gl.KEEP, gl.KEEP, gl.REPLACE)
+	} else {
+		gl.Disable(gl.STENCIL_TEST)
+	}
 
 	// blending setup
-	gl.Enable(gl.BLEND)
-	gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+	if rs.features.blending {
+		gl.Enable(gl.BLEND)
+		gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+	} else {
+		gl.Disable(gl.BLEND)
+	}
 
 	// enable gl_PointSize in vertex shader
-	gl.Enable(gl.PROGRAM_POINT_SIZE)
+	if rs.features.program_point_size {
+		gl.Enable(gl.PROGRAM_POINT_SIZE)
+	} else {
+		gl.Disable(gl.PROGRAM_POINT_SIZE)
+	}
 
 	// the vertex data must support this, 3D applications consistently
 	// use CCW (OpenGL default) winding order, do keep track of objects
 	// that shouln't be culled, like flat quads
-	gl.Enable(gl.CULL_FACE)
+	if rs.features.cull_face {
+		gl.Enable(gl.CULL_FACE)
+	} else {
+		gl.Disable(gl.CULL_FACE)
+	}
 
 	#partial switch rs.view_mode {
 	case .Wireframe:
@@ -270,11 +297,11 @@ primitive_draw :: proc(p: Primitive, dp: ^Draw_Params, texture_override := Textu
 	gl.ActiveTexture(gl.TEXTURE0)
 	gl.BindTexture(gl.TEXTURE_2D, cast(u32)texture)
 
-	if p.type == .Plane {
+	culling_enabled := dp.state.features.cull_face
+
+	if culling_enabled && (p.type == .Plane || p.type == .Quad) {
 		// flat primitives must not be culled
 		gl.Disable(gl.CULL_FACE)
-	} else {
-		gl.Enable(gl.CULL_FACE)
 	}
 
 	gl.BindVertexArray(p.vao)
@@ -283,6 +310,10 @@ primitive_draw :: proc(p: Primitive, dp: ^Draw_Params, texture_override := Textu
 		gl.DrawArraysInstanced(gl.TRIANGLES, 0, cast(i32)p.vertex_size, cast(i32)dp.num_instances)
 	} else {
 		gl.DrawArrays(gl.TRIANGLES, 0, cast(i32)p.vertex_size)
+	}
+
+	if culling_enabled {
+		gl.Enable(gl.CULL_FACE)
 	}
 
 	post_draw(p, dp)

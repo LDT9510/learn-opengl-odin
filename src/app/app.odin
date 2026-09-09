@@ -35,8 +35,15 @@ setup :: proc(s: ^State) {
 		show_ui            = true,
 	}
 	s.rs = {
-		view_mode   = .Normal,
+		view_mode = .Normal,
 		clear_color = {0.392, 0.584, 0.929},
+		features = {
+			depth_test = true,
+			stencil_test = true,
+			blending = true,
+			cull_face = true,
+			program_point_size = true,
+		},
 	}
 
 	log_sdl_version()
