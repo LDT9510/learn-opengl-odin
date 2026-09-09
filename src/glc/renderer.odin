@@ -49,6 +49,7 @@ Render_State :: struct {
 		blending:           bool,
 		cull_face:          bool,
 		program_point_size: bool,
+		anti_aliasing_msaa: bool,
 	},
 }
 
@@ -148,6 +149,14 @@ renderer_begin_drawing :: proc(rs: ^Render_State) {
 		gl.Enable(gl.CULL_FACE)
 	} else {
 		gl.Disable(gl.CULL_FACE)
+	}
+	
+	// actual algorithm is implemented by the driver, multi-sample buffer
+	// must be setup by the windowing system (SDL)
+	if rs.features.anti_aliasing_msaa {
+		gl.Enable(gl.MULTISAMPLE)
+	} else {
+		gl.Disable(gl.MULTISAMPLE)
 	}
 
 	#partial switch rs.view_mode {

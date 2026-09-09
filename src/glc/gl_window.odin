@@ -21,6 +21,8 @@ create_opengl_window :: proc() -> (window: ^sdl.Window, gl_ctx: sdl.GLContext) {
 	sdl.GL_SetAttribute(.CONTEXT_PROFILE_MASK, cast(c.int)sdl.GL_CONTEXT_PROFILE_CORE)
 	sdl.GL_SetAttribute(.DEPTH_SIZE, 24)
 	sdl.GL_SetAttribute(.STENCIL_SIZE, 8)
+	sdl.GL_SetAttribute(.MULTISAMPLEBUFFERS, 1)
+	sdl.GL_SetAttribute(.MULTISAMPLESAMPLES, 4)
 
 	window = sdl.CreateWindow(
 		"Learning OpenGL",

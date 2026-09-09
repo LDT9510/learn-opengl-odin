@@ -36,6 +36,8 @@ ui_sections_render :: proc(s: ^State) {
 			im.Checkbox("Point size", &s.rs.features.program_point_size)
 			im.SameLine()
 			im.Checkbox("Cull Face", &s.rs.features.cull_face)
+			im.SameLine()
+			im.Checkbox("MSAA 4X", &s.rs.features.anti_aliasing_msaa)
 		}
 
 		if im.TreeNode("View Modes") {

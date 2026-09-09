@@ -43,6 +43,7 @@ setup :: proc(s: ^State) {
 			blending = true,
 			cull_face = true,
 			program_point_size = true,
+			anti_aliasing_msaa = false,
 		},
 	}
 
