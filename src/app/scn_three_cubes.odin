@@ -2,16 +2,21 @@
 package app
 
 import "main:glc"
+import mod "main:modules"
 
 @(private)
 SCENE_THREE_CUBES :: Scene {
 	"Three Cubes",
 	"Outlined cubes in a plane, and a floating cube showing normals",
 	nil,
-	nil_scn_proc,
+	setup,
 	draw,
 	nil_scn_proc,
 	false,
+}
+
+setup :: proc(s: ^State, data: rawptr) {
+	s.app.camera = mod.camera_create(pos = {3.9, 3.2, 12.7}, yaw = -96, pitch = -13)
 }
 
 draw :: proc(s: ^State, _data: rawptr) {

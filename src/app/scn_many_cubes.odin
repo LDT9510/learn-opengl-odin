@@ -11,10 +11,14 @@ SCENE_MANY_CUBES :: Scene {
 	"Many Cubes",
 	"Matrix of cubes with breathing effect",
 	nil,
-	nil_scn_proc,
+	setup,
 	draw,
 	nil_scn_proc,
 	false,
+}
+
+setup :: proc(s: ^State, data: rawptr) {
+	s.app.camera = mod.camera_create(pos = {-3.2, 6.3, 28.5}, yaw = -63, pitch = -8)
 }
 
 draw :: proc(s: ^State, _data: rawptr) {

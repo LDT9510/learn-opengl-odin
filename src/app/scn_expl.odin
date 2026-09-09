@@ -11,10 +11,14 @@ SCENE_EXPLODING :: Scene {
 	"Exploding objects",
 	"Use geometry shaders to explode some objects",
 	nil,
-	nil_scn_proc,
+	setup,
 	draw,
 	nil_scn_proc,
 	false,
+}
+
+setup :: proc(s: ^State, data: rawptr) {
+	s.app.camera = mod.camera_create(pos = {7.2, 0.9, 8.5}, yaw = -119, pitch = 5)
 }
 
 draw :: proc(s: ^State, _data: rawptr) {

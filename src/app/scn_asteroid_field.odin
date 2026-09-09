@@ -2,6 +2,7 @@
 package app
 
 import "main:glc"
+import mod "main:modules"
 
 import "core:time"
 import "core:c/libc"
@@ -35,6 +36,10 @@ destroy :: proc(s: ^State, data: rawptr) {
 
 setup :: proc(s: ^State, data: rawptr) {
 	data := scene_data(data, Scene_Data)
+
+	s.app.camera = mod.camera_create(pos = {225.8, 96.3, 215.19}, yaw = -138, pitch = -21)
+	s.app.camera.frustrum_far = 500.0
+
 	libc.srand(cast(u32)time.now()._nsec)
 
 	radius := f32(150.0)

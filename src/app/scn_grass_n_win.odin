@@ -2,6 +2,7 @@
 package app
 
 import "main:glc"
+import mod "main:modules"
 
 import "core:slice"
 import glm "core:math/linalg/glsl"
@@ -11,7 +12,7 @@ SCENE_GRASS_N_WIN :: Scene {
 	"Grass and Windows",
 	"Showcasing blending",
 	nil,
-	nil_scn_proc,
+	setup,
 	draw,
 	nil_scn_proc,
 	false,
@@ -30,6 +31,10 @@ window_positions := [?]Window_Position {
     {0.0, { 0.5,  0.0, -0.6},},
 }
 // odinfmt: enable
+
+setup :: proc(s: ^State, data: rawptr) {
+	s.app.camera = mod.camera_create(pos = {1.1, 1.3, 10.7}, yaw = -88, pitch = -11)
+}
 
 draw :: proc(s: ^State, _data: rawptr) {
 	plane := glc.primitive_resource(.Plane)

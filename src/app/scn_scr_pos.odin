@@ -2,6 +2,7 @@
 package app
 
 import "main:glc"
+import mod "main:modules"
 
 import gl "vendor:OpenGL"
 
@@ -10,10 +11,14 @@ SCENE_SCRN_POS :: Scene {
 	"Screen position",
 	"Showcases sceen dependant position drawing",
 	nil,
-	nil_scn_proc,
+	setup,
 	draw,
 	nil_scn_proc,
 	false,
+}
+
+setup :: proc(s: ^State, data: rawptr) {
+	s.app.camera = mod.camera_create(pos = {2.3, 0.2, 5.0}, yaw = -106, pitch = -7)
 }
 
 draw :: proc(s: ^State, _data: rawptr) {

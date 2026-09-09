@@ -9,7 +9,15 @@ import im "extern:imgui"
 @(private = "file")
 ui_sections_render :: proc(s: ^State) {
 	if im.CollapsingHeader("Scene") {
-		im.ComboCallback("Scene Selection", &s.scene.idx, get_scene_name, &s.scene.registry, SCENES_COUNT)
+		if im.ComboCallback(
+			"Scene Selection",
+			&s.scene.idx,
+			get_scene_name,
+			&s.scene.registry,
+			SCENES_COUNT,
+		) {
+			current_scene(s).is_loaded = false
+		}
 		im.SetItemTooltip(current_scene(s).description)
 
 		im.ColorEdit3("Clear color", &s.rs.clear_color)

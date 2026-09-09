@@ -2,6 +2,7 @@
 package app
 
 import "main:glc"
+import mod "main:modules"
 
 import "core:fmt"
 import glm "core:math/linalg/glsl"
@@ -27,6 +28,8 @@ g_scene_data: Scene_Data
 
 setup :: proc(s: ^State, data: rawptr) {
 	data := scene_data(data, Scene_Data)
+
+	s.app.camera = mod.camera_create(pos = {7.3, 1.6, 42.3}, yaw = -90, pitch = -3)
 
 	index := 0
 	for y := -SIDE; y < SIDE; y += 2 {
