@@ -94,9 +94,18 @@ camera_on_mouse_move :: proc(c: ^Camera, x, y: f32, constrain_pitch: bool) {
 	_camera_update_vectors(c)
 }
 
-camera_on_mouse_wheel_scroll :: proc(c: ^Camera, mouse_wheel_direction: f32) {
-	c.zoom -= c.zoom_speed * mouse_wheel_direction
-	c.zoom = glm.clamp(c.zoom, 1.0, 45.0)
+camera_on_mouse_wheel_scroll :: proc(
+	c: ^Camera,
+	mouse_wheel_direction: f32,
+	increase_speed: bool,
+) {
+	if increase_speed {
+		c.movement_speed += 1.0 * mouse_wheel_direction
+		c.movement_speed = glm.clamp(c.movement_speed, 1.0, 50.0)
+	} else {
+		c.zoom -= c.zoom_speed * mouse_wheel_direction
+		c.zoom = glm.clamp(c.zoom, 1.0, 120.0)
+	}
 }
 
 camera_dev_ui_frame :: proc(c: ^Camera) {

@@ -147,7 +147,8 @@ process_events :: proc(event: sdl.Event, state: rawptr) {
 		w := event.window
 		glc.renderer_handle_viewport_changed(&s.rs, w.data1, w.data2)
 	case .MOUSE_WHEEL:
-		mod.camera_on_mouse_wheel_scroll(&s.app.camera, event.wheel.y)
+		increase_speed := s.app.is_capturing_mouse
+		mod.camera_on_mouse_wheel_scroll(&s.app.camera, event.wheel.y, increase_speed)
 	case .MOUSE_MOTION:
 		if s.app.is_capturing_mouse {
 			mod.camera_on_mouse_move(&s.app.camera, event.motion.xrel, -event.motion.yrel, true)

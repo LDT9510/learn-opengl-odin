@@ -115,14 +115,17 @@ render_main_ui_window :: proc(s: ^State, scene_ui_proc: Scene_Proc) {
 	TABLE_FLAGS :: im.TableFlags_RowBg | im.TableFlags_Borders
 	if im.BeginTable("shortcuts", 2, TABLE_FLAGS) {
 		defer im.EndTable()
-		im.TableSetupColumn("Key", {.WidthFixed}, 120.0)
+		im.TableSetupColumn("Key", {.WidthFixed}, 200.0)
 		im.TableSetupColumn("Description", {.WidthStretch})
 		im.TableHeadersRow()
 		im.TableNextRow()
 		im.TableNextColumn()
 
-		shortcut("(Shift +)WASD", "(Sprint) Camera move")
+		shortcut("WASD", "Camera move")
+		shortcut("(Shift +)WASD", "Camera sprint")
 		shortcut("Right click (hold)", "Look around")
+		shortcut("Right click + Mouse Wheel", "Camera speed")
+		shortcut("Mouse Wheel", "Camera zoom (FOV)")
 		shortcut("R", "Reload shaders")
 		shortcut("I", "Toggle UI")
 		shortcut("P", "Toggle depth buffer view")
