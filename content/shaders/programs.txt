@@ -13,3 +13,5 @@ normals,          normals,                      yellow,          normals
 instancing,       pos_norm_tex_instanced,       uv_map,          nil
 instancing_attr,  pos_norm_tex_instanced_attr,  uv_map,          nil
 instancing_model, pos_norm_tex_instanced_model, uv_map,          nil
+blinn_phong,      pos_norm_tex,                 blinn_phong,     nil
+light_cube,       pos_norm_tex,                 light_cube,      nil

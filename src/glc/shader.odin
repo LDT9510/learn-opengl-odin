@@ -128,6 +128,17 @@ shader_delete_program :: proc(program: Shader_Program) {
 	gl.DeleteProgram(program.id)
 }
 
+shader_texture_sampler_set :: proc(
+	program_id: Shader_Program,
+	name: cstring,
+	texture_id: Texture_Id,
+	unit: i32,
+) {
+	shader_uniform_set(program_id, name, unit)
+	gl.ActiveTexture(gl.TEXTURE0 + cast(u32)unit)
+	gl.BindTexture(gl.TEXTURE_2D, cast(u32)texture_id)
+}
+
 shader_uniform_set :: proc {
 	shader_uniform_set_bool,
 	shader_uniform_set_int32,

@@ -301,6 +301,7 @@ primitive_draw :: proc(p: Primitive, dp: ^Draw_Params, texture_override := Textu
 			shader_uniform_set(dp.shader, "u_model", model_matrix)
 		}
 		shader_uniform_set(dp.shader, "u_texture_diffuse1", 0)
+		shader_texture_sampler_set(dp.shader, "u_material.diffuse", texture, 0)
 	}
 
 	gl.ActiveTexture(gl.TEXTURE0)
@@ -363,6 +364,7 @@ cubemap_draw :: proc(cubemap: Cubemap, dp: Draw_Params) {
 
 	gl.BindBuffer(gl.UNIFORM_BUFFER, 0)
 }
+
 
 framebuffer_draw :: proc(fb: Framebuffer, dp: ^Draw_Params, clear := false) {
 	gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
