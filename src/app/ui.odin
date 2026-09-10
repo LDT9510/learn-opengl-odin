@@ -4,6 +4,8 @@ import "main:glc"
 import "main:devui"
 import mod "main:modules"
 
+import gl "vendor:OpenGL"
+
 import im "extern:imgui"
 
 @(private = "file")
@@ -25,6 +27,7 @@ ui_sections_render :: proc(s: ^State) {
 			im.Checkbox("Cull Face", &s.rs.features.cull_face)
 			im.SameLine()
 			im.Checkbox("MSAA 4X", &s.rs.features.anti_aliasing_msaa)
+			im.Checkbox("Gamma Correction", &s.rs.features.gamma_correction)
 		}
 
 		if im.TreeNode("View Modes") {
@@ -86,7 +89,14 @@ ui_sections_render :: proc(s: ^State) {
 
 render_main_ui_window :: proc(s: ^State, scene_ui_proc: Scene_Proc) {
 	devui.begin_frame()
-	defer devui.render_frame()
+	defer {
+		// do not let gamma correction affect the UI
+		gl.Disable(gl.FRAMEBUFFER_SRGB)
+		devui.render_frame()
+		if s.rs.features.gamma_correction {
+			gl.Enable(gl.FRAMEBUFFER_SRGB)
+		}
+	}
 
 	im.Begin("Learning OpenGL")
 	defer im.End()

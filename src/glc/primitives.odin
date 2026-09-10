@@ -78,13 +78,19 @@ primitive_create_from_image :: proc(
 	image_name: string,
 	flip_texture_vertically := false,
 	transparent := false,
+	gamma_corrected := false,
 ) -> (
 	primitive: Primitive,
 	ok: bool,
 ) {
 	p := _primitive_create_internal(p_type, flip_texture_vertically, transparent)
 
-	texture, t_ok := texture_load(image_name, flip_texture_vertically, transparent)
+	texture, t_ok := texture_load(
+		image_name,
+		flip_texture_vertically,
+		transparent,
+		gamma_corrected,
+	)
 	if !t_ok {
 		return
 	}

@@ -72,7 +72,7 @@ texture_resource :: proc(index: res.Textures_Index) -> Texture_Id {
 	if !g_texture_registry[index].is_loaded {
 		location := res.TEXTURES_LOCATION[index]
 		log.debugf("Loading image: '%s'", location.name)
-		resource, ok := texture_load(location.name, location.flip, location.transparent)
+		resource, ok := texture_load(location.name, location.flip, location.transparent, location.gamma_corrected)
 		if !ok {
 			log.errorf("Cannot load image: %s", location.name)
 		} else {
@@ -117,7 +117,8 @@ g_cubemap_registry: [res.Cubemaps_Index]Resource(Cubemap)
 
 cubemap_resource :: proc(index: res.Cubemaps_Index) -> Cubemap {
 	loader :: proc(location: string) -> (Cubemap, bool) {
-		return cubemap_load(location)
+		// assume in sRGB
+		return cubemap_load(location, true)
 	}
 
 	return resource_indexer(

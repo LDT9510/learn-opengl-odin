@@ -10,7 +10,7 @@ Cubemap :: struct {
 	texture:  u32,
 }
 
-cubemap_load :: proc(name: string) -> (cubemap: Cubemap, ok: bool) {
+cubemap_load :: proc(name: string, gamma_corrected: bool) -> (cubemap: Cubemap, ok: bool) {
 	cbm: Cubemap
 
 	cubemap_images := content_load_cubemap_images(name) or_return
@@ -20,16 +20,22 @@ cubemap_load :: proc(name: string) -> (cubemap: Cubemap, ok: bool) {
 	gl.GenTextures(1, &cbm.texture)
 	gl.BindTexture(gl.TEXTURE_CUBE_MAP, cbm.texture)
 	for image, i in cubemap_images {
-		image_format: u32 = image.channels == 4 ? gl.RGBA : gl.RGB
+		format: u32 = image.channels == 4 ? gl.RGBA : gl.RGB
+		internal_format: i32
+		if gamma_corrected {
+			internal_format = image.channels == 4 ? gl.SRGB_ALPHA : gl.SRGB
+		} else {
+			internal_format = image.channels == 4 ? gl.RGBA : gl.RGB
+		}
 
 		gl.TexImage2D(
 			gl.TEXTURE_CUBE_MAP_POSITIVE_X + cast(u32)i,
 			0,
-			cast(i32)image_format,
+			internal_format,
 			cast(i32)image.width,
 			cast(i32)image.height,
 			0,
-			image_format,
+			format,
 			gl.UNSIGNED_BYTE,
 			raw_data(image.pixels.buf),
 		)

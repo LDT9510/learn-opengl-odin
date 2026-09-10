@@ -23,6 +23,7 @@ create_opengl_window :: proc() -> (window: ^sdl.Window, gl_ctx: sdl.GLContext) {
 	sdl.GL_SetAttribute(.STENCIL_SIZE, 8)
 	sdl.GL_SetAttribute(.MULTISAMPLEBUFFERS, 1)
 	sdl.GL_SetAttribute(.MULTISAMPLESAMPLES, 4)
+	sdl.GL_SetAttribute(.FRAMEBUFFER_SRGB_CAPABLE, 1)
 
 	window = sdl.CreateWindow(
 		"Learning OpenGL",

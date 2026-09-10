@@ -9,7 +9,7 @@ Framebuffer :: struct {
 	primitive:     Primitive,
 }
 
-framebuffer_create :: proc(primitive_type: Primitive_Type, width, height: i32) -> Framebuffer {
+framebuffer_create :: proc(primitive_type: Primitive_Type, width, height: i32, gamma_corrected: bool) -> Framebuffer {
 	fb: Framebuffer
 
 	// create
@@ -17,7 +17,7 @@ framebuffer_create :: proc(primitive_type: Primitive_Type, width, height: i32) -
 	gl.BindFramebuffer(gl.FRAMEBUFFER, fb.id)
 
 	// bind render texture, as we need to read from it
-	fb.texture = texture_load(width, height)
+	fb.texture = texture_load(width, height, gamma_corrected)
 	fb.primitive = primitive_create(primitive_type, fb.texture)
 	gl.BindTexture(gl.TEXTURE_2D, cast(u32)fb.texture)
 	gl.FramebufferTexture2D(

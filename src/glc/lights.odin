@@ -83,12 +83,18 @@ lights_set_uniforms :: proc(
 	program: Shader_Program,
 	camera: mod.Camera,
 	blinn: bool,
+	gamma_corrected: bool,
+	linear_attenuation := true
 ) {
 	shader_use_program(program)
+
+	// shorted name
+	g := gamma_corrected
 
 	// global
 	shader_uniform_set(program, "u_view_pos", camera.position)
 	shader_uniform_set(program, "u_blinn", blinn)
+	shader_uniform_set(program, "u_linear_attenuation", linear_attenuation)
 
 	// directional
 	shader_uniform_set(program, "u_dir_on", lights.dir_on)
@@ -97,17 +103,17 @@ lights_set_uniforms :: proc(
 		shader_uniform_set(
 			program,
 			"u_dir_light.ambient",
-			lights_get_ambient(lights.directional.props),
+			lights_get_ambient(lights.directional.props, g),
 		)
 		shader_uniform_set(
 			program,
 			"u_dir_light.diffuse",
-			lights_get_diffuse(lights.directional.props),
+			lights_get_diffuse(lights.directional.props, g),
 		)
 		shader_uniform_set(
 			program,
 			"u_dir_light.specular",
-			lights_get_specular(lights.directional.props),
+			lights_get_specular(lights.directional.props, g),
 		)
 	}
 
@@ -127,9 +133,9 @@ lights_set_uniforms :: proc(
 			shader_uniform_set(program, u_constant, lights.point[i].att.constant)
 			shader_uniform_set(program, u_linear, lights.point[i].att.linear)
 			shader_uniform_set(program, u_quadratic, lights.point[i].att.quadratic)
-			shader_uniform_set(program, u_ambient, lights_get_ambient(lights.point[i].props))
-			shader_uniform_set(program, u_diffuse, lights_get_diffuse(lights.point[i].props))
-			shader_uniform_set(program, u_specular, lights_get_specular(lights.point[i].props))
+			shader_uniform_set(program, u_ambient, lights_get_ambient(lights.point[i].props, g))
+			shader_uniform_set(program, u_diffuse, lights_get_diffuse(lights.point[i].props, g))
+			shader_uniform_set(program, u_specular, lights_get_specular(lights.point[i].props, g))
 		}
 	}
 
@@ -147,12 +153,20 @@ lights_set_uniforms :: proc(
 		shader_uniform_set(program, "u_spot_light.constant", lights.spot.att.constant)
 		shader_uniform_set(program, "u_spot_light.linear", lights.spot.att.linear)
 		shader_uniform_set(program, "u_spot_light.quadratic", lights.spot.att.quadratic)
-		shader_uniform_set(program, "u_spot_light.ambient", lights_get_ambient(lights.spot.props))
-		shader_uniform_set(program, "u_spot_light.diffuse", lights_get_diffuse(lights.spot.props))
+		shader_uniform_set(
+			program,
+			"u_spot_light.ambient",
+			lights_get_ambient(lights.spot.props, g),
+		)
+		shader_uniform_set(
+			program,
+			"u_spot_light.diffuse",
+			lights_get_diffuse(lights.spot.props, g),
+		)
 		shader_uniform_set(
 			program,
 			"u_spot_light.specular",
-			lights_get_specular(lights.spot.props),
+			lights_get_specular(lights.spot.props, g),
 		)
 	}
 }
@@ -174,16 +188,36 @@ lights_render_point_lights :: proc(lights: Lights, primitive: Primitive, rs: ^Re
 	}
 }
 
-lights_get_ambient :: proc(props: Light_Props) -> glm.vec3 {
-	return props.ambient * props.color
+GAMMA :: 2.2
+
+lights_get_ambient :: proc(props: Light_Props, gamma_corrected: bool) -> glm.vec3 {
+	val := props.ambient * props.color
+
+	if gamma_corrected {
+		val = glm.pow(val, GAMMA)
+	}
+
+	return val
 }
 
-lights_get_diffuse :: proc(props: Light_Props) -> glm.vec3 {
-	return props.diffuse * props.color
+lights_get_diffuse :: proc(props: Light_Props, gamma_corrected: bool) -> glm.vec3 {
+	val := props.diffuse * props.color
+
+	if gamma_corrected {
+		val = glm.pow(val, GAMMA)
+	}
+
+	return val
 }
 
-lights_get_specular :: proc(props: Light_Props) -> glm.vec3 {
-	return props.specular * props.color
+lights_get_specular :: proc(props: Light_Props, gamma_corrected: bool) -> glm.vec3 {
+	val := props.specular * props.color
+
+	if gamma_corrected {
+		val = glm.pow(val, GAMMA)
+	}
+
+	return val
 }
 
 lights_dev_ui :: proc(lights: ^Lights) {

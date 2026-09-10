@@ -105,19 +105,22 @@ def gen_textures() -> str:
         # without a proper resource system this must be done manually
         match entry.stem:
             case "grass":
-                location = f"{q(entry.name)}, true, true"
+                location = f"{q(entry.name)}, true, true, true"
             case "transparent_window":
-                location = f"name = {q(entry.name)}, transparent = true"
+                location = f"name = {q(entry.name)}, transparent = true, gamma_corrected = true"
+            case "crate_specular":
+                location = f"name = {q(entry.name)}, transparent = true, gamma_corrected = false"
             case _:
-                location = f"name = {q(entry.name)}"
+                location = f"name = {q(entry.name)}, gamma_corrected = true"
 
         textures.append(ResourcePath(entry.stem, "{" + location + "}", False))
 
     extra_decls = """
         Texture_Resource_Params :: struct {
-                name:        string,
-                flip:        bool,
-                transparent: bool,
+                name:            string,
+                flip:            bool,
+                transparent:     bool,
+                gamma_corrected: bool
         }
     """
 

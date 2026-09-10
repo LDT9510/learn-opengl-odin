@@ -71,8 +71,8 @@ process :: proc(in_mesh: ^ai.Mesh, scene: ^ai.Scene, model_name: string) -> (mes
 	// vertex data
 	for i in 0 ..< in_mesh.mNumVertices {
 		vertex := Vertex {
-			position   = in_mesh.mVertices[i],
-			normal     = in_mesh.mNormals[i],
+			position = in_mesh.mVertices[i],
+			normal   = in_mesh.mNormals[i],
 		}
 		if (in_mesh.mTextureCoords[0] != nil) {
 			vertex.tex_coords = in_mesh.mTextureCoords[0][i].xy
@@ -128,7 +128,9 @@ load_material_textures :: proc(
 		if !skip {
 			path := ai.string_clone_from_ai_string(&ai_str_path, allocator)
 
-			texture_id, ok := texture_load_from_model(model_name, path)
+			// we assume diffuse material is always sRGB
+			gamma_corrected := type == .DIFFUSE
+			texture_id, ok := texture_load(model_name, path, gamma_corrected)
 			if ok {
 				texture := Model_Texture {
 					id   = texture_id,

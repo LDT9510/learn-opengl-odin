@@ -50,6 +50,7 @@ Render_State :: struct {
 		cull_face:          bool,
 		program_point_size: bool,
 		anti_aliasing_msaa: bool,
+		gamma_correction:   bool,
 	},
 }
 
@@ -150,13 +151,19 @@ renderer_begin_drawing :: proc(rs: ^Render_State) {
 	} else {
 		gl.Disable(gl.CULL_FACE)
 	}
-	
+
 	// actual algorithm is implemented by the driver, multi-sample buffer
 	// must be setup by the windowing system (SDL)
 	if rs.features.anti_aliasing_msaa {
 		gl.Enable(gl.MULTISAMPLE)
 	} else {
 		gl.Disable(gl.MULTISAMPLE)
+	}
+
+	if rs.features.gamma_correction {
+		gl.Enable(gl.FRAMEBUFFER_SRGB)
+	} else {
+		gl.Disable(gl.FRAMEBUFFER_SRGB)
 	}
 
 	#partial switch rs.view_mode {
@@ -167,7 +174,12 @@ renderer_begin_drawing :: proc(rs: ^Render_State) {
 		gl.ClearColor(0.0, 0.0, 0.0, 1.0)
 		gl.PolygonMode(gl.FRONT_AND_BACK, gl.POINT)
 	case:
-		gl.ClearColor(**rs.clear_color, 1.0)
+		if rs.features.gamma_correction {
+			gamma := 2.2
+			gl.ClearColor(**glm.pow(rs.clear_color, glm.vec3(gamma)), 1.0)
+		} else {
+			gl.ClearColor(**rs.clear_color, 1.0)
+		}
 		gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
 	}
 
@@ -203,7 +215,7 @@ renderer_handle_viewport_changed :: proc(rs: ^Render_State, width, height: i32) 
 
 	log.infof("Recreating post-process effects framebuffer")
 	framebuffer_destroy(&rs.post_process.fb)
-	rs.post_process.fb = framebuffer_create(.Full_Quad, width, height)
+	rs.post_process.fb = framebuffer_create(.Full_Quad, width, height, rs.features.gamma_correction)
 }
 
 draw :: proc {

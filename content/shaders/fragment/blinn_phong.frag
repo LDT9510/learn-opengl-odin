@@ -58,6 +58,7 @@ uniform PointLight u_point_lights[MAX_POINT_LIGHTS];
 uniform SpotLight u_spot_light;
 uniform bool u_dir_on, u_point_on, u_spot_on;
 uniform bool u_blinn;
+uniform bool u_linear_attenuation;
 
 vec3 calc_directional_light(DirectionalLight light, vec3 normal, vec3 view_dir);
 vec3 calc_point_light(PointLight light, vec3 normal, vec3 frag_pos, vec3 view_dir);
@@ -127,7 +128,9 @@ vec3 calc_point_light(PointLight light, vec3 normal, vec3 frag_pos, vec3 view_di
     float Kc = light.constant;
     float Kl = light.linear;
     float Kq = light.quadratic;
-    float attenuation = 1.0 / (Kc + (Kl * d) + (Kq * (d * d)));
+
+    float attenuation_factor = u_linear_attenuation ? d : (d * d);
+    float attenuation = 1.0 / (Kc + (Kl * d) + (Kq * attenuation_factor));
 
     vec3 ambient = light.ambient * texture(u_material.diffuse, v_tex_coords).rgb * attenuation;
     vec3 diffuse = light.diffuse * diff * texture(u_material.diffuse, v_tex_coords).rgb * attenuation;
@@ -146,7 +149,7 @@ vec3 calc_spot_light(SpotLight light, vec3 normal, vec3 frag_pos, vec3 view_dir)
     float Kc = light.constant;
     float Kl = light.linear;
     float Kq = light.quadratic;
-    float attenuation = 1.0 / (Kc + (Kl * d) + (Kq * (d * d)));
+    float attenuation = 1.0 / (Kc + (Kl * d) + (Kq * d));
 
     float theta = dot(light_dir, normalize(-light.direction));
     float epsilon = light.cutoff - light.outer_cutoff;

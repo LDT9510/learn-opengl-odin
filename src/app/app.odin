@@ -45,6 +45,7 @@ setup :: proc(s: ^State) {
 			cull_face = true,
 			program_point_size = true,
 			anti_aliasing_msaa = false,
+			gamma_correction = true,
 		},
 	}
 
@@ -57,7 +58,7 @@ setup :: proc(s: ^State) {
 	// setup developer UI
 	devui.init_for_sdl_window(s.app.window, s.app.gl_context)
 
-	s.rs.post_process.fb = glc.framebuffer_create(.Full_Quad, glc.WINDOW_WIDTH, glc.WINDOW_HEIGHT)
+	s.rs.post_process.fb = glc.framebuffer_create(.Full_Quad, glc.WINDOW_WIDTH, glc.WINDOW_HEIGHT, s.rs.features.gamma_correction)
 
 	// dynamic resources
 	glc.post_process_effects_get_available()
