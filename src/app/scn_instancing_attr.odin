@@ -13,6 +13,7 @@ SCENE_INSTANCING_ATTR := scene(
 	"Use instancing to draw many boxes using instancing with vertex attributes",
 	setup,
 	draw,
+	nil_scn_proc,
 	destroy,
 )
 
