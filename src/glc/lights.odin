@@ -84,7 +84,7 @@ lights_set_uniforms :: proc(
 	camera: mod.Camera,
 	blinn: bool,
 	gamma_corrected: bool,
-	linear_attenuation := true
+	linear_attenuation := true,
 ) {
 	shader_use_program(program)
 

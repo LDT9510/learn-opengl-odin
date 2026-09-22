@@ -152,7 +152,7 @@ process_events :: proc(event: sdl.Event, state: rawptr) {
 		mod.camera_on_mouse_wheel_scroll(&s.app.camera, event.wheel.y, increase_speed)
 	case .MOUSE_MOTION:
 		if s.app.is_capturing_mouse {
-			mod.camera_on_mouse_move(&s.app.camera, event.motion.xrel, -event.motion.yrel, true)
+			mod.camera_on_mouse_move(&s.app.camera, event.motion.xrel, -event.motion.yrel)
 		}
 	}
 }
