@@ -1,7 +1,15 @@
 @echo off
 setlocal EnableDelayedExpansion
 
-rem NOTE: executables in "output_dir" are not portable
+:: NOTE: executables in "output_dir" are not portable
+
+:: Commands:
+:: run.bat (Run the project in "dev" mode, fast compile, minimal optimizations)
+:: run.bat debug [attach/render] (Debug mode, use extra keyword "attach" to launch RadDebugger, and "render" to launch Renderdoc)
+:: run.bat release [size] (Release mode, use "size" for minimal size optimization)
+:: run.bat ex <section> <num> (Run excersise, "section" is the name of the subdirs in "exercises/", num is a number to run the files named "ex<num>.odin")
+:: run.bat build-all (Build all excersies and the main project)
+:: run.bat res (Generates resources, requires uv python manager)
 
 set project_name=learn_opengl
 
@@ -94,7 +102,7 @@ if %command%=="release" (
 )
 if %command%=="ex" (
 	set is_command_known=yes
-	set "usage=build.bat exercise <section> <num>"
+	set "usage=run.bat ex <section> <num>"
 	if "%~2"=="" (
 		echo Missing section
 		echo Usage: !usage!
@@ -177,8 +185,12 @@ if %build_all%==yes (
 	exit /b 0
 )
 
+:: copy runtime binaries
+copy binaries\win32\* .bin >nul
+
 echo Running: %final_build_command%
 %final_build_command%
+
 
 if %ERRORLEVEL%==0 (
 	cd %output_dir%
